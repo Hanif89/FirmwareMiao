@@ -191,7 +191,9 @@ private:
 	struct map_projection_reference_s _ref_pos;
 	float _ref_alt;
 	hrt_abstime _ref_timestamp;
-
+	float _hover_time; //miao: hover time for auto take off
+ 	int _mode_mission; //miao:
+ 	bool _reset_mission;//miao
 	bool _reset_pos_sp;
 	bool _reset_alt_sp;
 	bool _mode_auto;
@@ -607,8 +609,37 @@ MulticopterPositionControl::control_manual(float dt)
 	_sp_move_rate.zero();
 
 	if (_control_mode.flag_control_altitude_enabled) {
-		/* move altitude setpoint with throttle stick */
-		_sp_move_rate(2) = -scale_control(_manual.z - 0.5f, 0.5f, alt_ctl_dz);
+		if(_reset_mission)
+		{
+			_reset_mission = false;
+			_mode_mission = 1 ;
+			_hover_time = 0.0 ;
+		}
+		float height_hover_constant=-1.0;
+		float hover_time_constant = 20.0;
+		switch(_mode_mission)
+		{	
+			case 1:
+				_sp_move_rate(2) = -0.8;
+				if(_pos_sp(2)<=height_hover_constant)
+					_mode_mission=2;
+				break;
+			case 2:
+				_hover_time += dt;
+				if(_hover_time>hover_time_constant)
+				{
+					_hover_time=0.0;
+					_mode_mission=3;
+				}
+				break;
+			case 3:
+				_pos_sp_triplet.current.type =position_setpoint_s::SETPOINT_TYPE_LAND;
+				break;
+			default:
+				/* move altitude setpoint with throttle stick */
+				_sp_move_rate(2) = -scale_control(_manual.z - 0.5f, 0.5f, alt_ctl_dz);
+				break;
+		}
 	}
 
 	if (_control_mode.flag_control_position_enabled) {
@@ -926,7 +957,8 @@ MulticopterPositionControl::task_main()
 	bool was_armed = false;
 
 	hrt_abstime t_prev = 0;
-
+	_hover_time = 0.0; // miao:
+	_mode_mission = 1;
 	math::Vector<3> thrust_int;
 	thrust_int.zero();
 	math::Matrix<3, 3> R;
@@ -967,6 +999,7 @@ MulticopterPositionControl::task_main()
 			reset_int_z = true;
 			reset_int_xy = true;
 			reset_yaw_sp = true;
+			_reset_mission = true;//miao:
 		}
 
 		//Update previous arming state
@@ -1045,7 +1078,9 @@ MulticopterPositionControl::task_main()
 				}
 
 				/* use constant descend rate when landing, ignore altitude setpoint */
-				if (!_control_mode.flag_control_manual_enabled && _pos_sp_triplet.current.valid && _pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_LAND) {
+				//if (!_control_mode.flag_control_manual_enabled && _pos_sp_triplet.current.valid && _pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_LAND) {
+				// miao: for auto landing test with manual mode
+				if (_mode_mission==3) {
 					_vel_sp(2) = _params.land_speed;
 				}
 
