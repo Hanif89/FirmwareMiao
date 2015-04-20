@@ -53,6 +53,7 @@
 #include "topics/vehicle_attitude_setpoint.h"
 #include "topics/vehicle_rates_setpoint.h"
 #include "topics/rc_channels.h"
+#include "topics/ros_estimate_path.h"
 
 namespace uORB
 {
@@ -97,5 +98,6 @@ template class __EXPORT Subscription<vehicle_rates_setpoint_s>;
 template class __EXPORT Subscription<rc_channels_s>;
 template class __EXPORT Subscription<vehicle_control_mode_s>;
 template class __EXPORT Subscription<actuator_armed_s>;
+template class __EXPORT Subscription<ros_estimate_path_s>;
 
 } // namespace uORB

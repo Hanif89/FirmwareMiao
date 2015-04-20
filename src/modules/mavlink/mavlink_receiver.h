@@ -73,6 +73,7 @@
 #include <uORB/topics/airspeed.h>
 #include <uORB/topics/battery_status.h>
 #include <uORB/topics/vehicle_force_setpoint.h>
+#include <uORB/topics/ros_estimate_path.h>
 
 #include "mavlink_ftp.h"
 
@@ -133,6 +134,7 @@ private:
 	void handle_message_hil_sensor(mavlink_message_t *msg);
 	void handle_message_hil_gps(mavlink_message_t *msg);
 	void handle_message_hil_state_quaternion(mavlink_message_t *msg);
+	void handle_message_ros_estimate_path(mavlink_message_t *msg);
 
 	void *receive_thread(void *arg);
 
@@ -171,6 +173,7 @@ private:
 	orb_advert_t _force_sp_pub;
 	orb_advert_t _pos_sp_triplet_pub;
 	orb_advert_t _vicon_position_pub;
+	orb_advert_t _ros_pub;
 	orb_advert_t _vision_position_pub;
 	orb_advert_t _telemetry_status_pub;
 	orb_advert_t _rc_pub;

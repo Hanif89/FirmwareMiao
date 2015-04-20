@@ -73,6 +73,8 @@
 #include <uORB/topics/position_setpoint_triplet.h>
 #include <uORB/topics/vehicle_global_velocity_setpoint.h>
 #include <uORB/topics/vehicle_local_position_setpoint.h>
+#include <uORB/topics/ros_estimate_path.h>
+#include <uORB/topics/vehicle_vicon_position.h>
 
 #include <systemlib/systemlib.h>
 #include <mathlib/mathlib.h>
@@ -129,6 +131,10 @@ private:
 	int		_local_pos_sp_sub;		/**< offboard local position setpoint */
 	int		_global_vel_sp_sub;		/**< offboard global velocity setpoint */
 
+	int		_ros_sub;	/**< vehicle status subscription */
+	int		_vicon_sub;	/**< vehicle status subscription */
+
+
 	orb_advert_t	_att_sp_pub;			/**< attitude setpoint publication */
 	orb_advert_t	_local_pos_sp_pub;		/**< vehicle local position setpoint publication */
 	orb_advert_t	_global_vel_sp_pub;		/**< vehicle global velocity setpoint publication */
@@ -143,6 +149,8 @@ private:
 	struct vehicle_local_position_setpoint_s	_local_pos_sp;		/**< vehicle local position setpoint */
 	struct vehicle_global_velocity_setpoint_s	_global_vel_sp;	/**< vehicle global velocity setpoint */
 
+	struct ros_estimate_path_s _ros; /**< ros based position estimate and path planning */
+	struct vehicle_vicon_position_s _vicon;
 
 	struct {
 		param_t thr_min;
@@ -191,9 +199,16 @@ private:
 	struct map_projection_reference_s _ref_pos;
 	float _ref_alt;
 	hrt_abstime _ref_timestamp;
+
 	float _hover_time; //miao: hover time for auto take off
+	float _UWBdata_loss_time; // miao when UWB data loss exceed 2seconds , it will land
  	int _mode_mission; //miao:
  	bool _reset_mission;//miao
+ 	bool _flag_ros;
+ 	float _UWB_init_yaw;
+ 	float _send_UWB_data_frq;
+
+
 	bool _reset_pos_sp;
 	bool _reset_alt_sp;
 	bool _mode_auto;
@@ -241,6 +256,12 @@ private:
 	 * Check if position setpoint is too far from current position and adjust it if needed.
 	 */
 	void		limit_pos_sp_offset();
+
+	/**
+	 * Set position setpoint using manual indoor control
+	 * miao 17-4-2015  for indoor auto control
+	 */
+	void		control_auto_indoor(float dt);
 
 	/**
 	 * Set position setpoint using manual control
@@ -304,7 +325,8 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_local_pos_sub(-1),
 	_pos_sp_triplet_sub(-1),
 	_global_vel_sp_sub(-1),
-
+	_ros_sub(-1),
+	_vicon_sub(-1),
 /* publications */
 	_att_sp_pub(-1),
 	_local_pos_sp_pub(-1),
@@ -328,7 +350,7 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	memset(&_global_vel_sp, 0, sizeof(_global_vel_sp));
 
 	memset(&_ref_pos, 0, sizeof(_ref_pos));
-
+	memset(&_ros, 0, sizeof(_ros));
 	_params.pos_p.zero();
 	_params.vel_p.zero();
 	_params.vel_i.zero();
@@ -506,6 +528,34 @@ MulticopterPositionControl::poll_subscriptions()
 
 	if (updated) {
 		orb_copy(ORB_ID(vehicle_local_position), _local_pos_sub, &_local_pos);
+		// miao 17-4-2015, set ros inavidate
+		//_flag_ros = false;
+	}
+
+	orb_check(_ros_sub, &updated);	
+	if (updated) {
+		orb_copy(ORB_ID(ros_estimate_path), _ros_sub, &_ros);
+		if(_ros.x >= -1.0f){
+				mavlink_log_info(_mavlink_fd, "ros: data loss");
+		}
+		_send_UWB_data_frq += 0.02f ;
+		if(_send_UWB_data_frq >= 1.0f){
+			_send_UWB_data_frq = 0.0f;
+			mavlink_log_info(_mavlink_fd, "ros:%3.2f,%3.2f,%3.2f,%3.2f,%3.2f,%3.2f", (double)_ros.x,
+					(double)_ros.y, (double)_ros.z,(double)_ros.yaw,(double)_ros.vx,(double)_ros.vy);
+		}
+
+		_UWBdata_loss_time = 0.0 ;
+
+	}else{ // miao: 18-4-2015 , data loss protect
+		if(_control_mode.flag_control_position_enabled && _flag_ros ){
+			_UWBdata_loss_time += 0.01f ;
+			if(_UWBdata_loss_time > 2.0f) // data loss 2 seconds, will land
+			{
+				_mode_mission = 4;
+				//_UWBdata_loss_time = 0.0 ;				
+			}
+		}		
 	}
 }
 
@@ -602,6 +652,116 @@ MulticopterPositionControl::limit_pos_sp_offset()
 		_pos_sp = _pos + pos_sp_offs.emult(_params.sp_offs_max);
 	}
 }
+void
+MulticopterPositionControl::control_auto_indoor(float dt)
+{
+	/*bool updated;
+	orb_check(_ros_sub, &updated);	
+	if (updated) {
+		orb_copy(ORB_ID(ros_estimate_path), _ros_sub, &_ros);
+		mavlink_log_info(_mavlink_fd, "ros:%3.2f,%3.2f,%3.2f,%3.2f,%3.2f,%3.2f", (double)_ros.x,
+			(double)_ros.y, (double)_ros.z,(double)_ros.yaw,(double)_ros.vx,(double)_ros.vy);
+	}*/
+	_sp_move_rate.zero();
+
+	if(_reset_mission){
+		_reset_mission = false;
+		_mode_mission = 1 ;
+		_hover_time = 0.0f ;
+	}
+	float height_hover_constant= -1.0f;
+	float hover_time_constant = 30.0f;
+
+	//if(_ros.flight_mode==1)
+	if(_mode_mission == 1)
+	{
+		if(_pos_sp(2) <= height_hover_constant)
+		{
+			_sp_move_rate(2) = 0.0;
+		}else
+		{
+			_sp_move_rate(2) = -0.8;
+			/* reset alt setpoint to current altitude if needed */
+			reset_alt_sp();
+			/* reset position setpoint to current position if needed */
+			reset_pos_sp();
+		}
+		_sp_move_rate(0) = 0.0;
+		_sp_move_rate(1) = 0.0;
+		/* limit setpoint move rate */
+		float sp_move_norm = _sp_move_rate.length();
+
+		if (sp_move_norm > 1.0f) {
+			_sp_move_rate /= sp_move_norm;
+		}
+		/* _sp_move_rate scaled to 0..1, scale it to max speed and rotate around yaw */
+		math::Matrix<3, 3> R_yaw_sp;
+		R_yaw_sp.from_euler(0.0f, 0.0f, _att_sp.yaw_body);
+		_sp_move_rate = R_yaw_sp * _sp_move_rate.emult(_params.vel_max);
+		
+		/* feed forward setpoint move rate with weight vel_ff */
+		_vel_ff = _sp_move_rate.emult(_params.vel_ff);
+
+		/* move position setpoint */
+		_pos_sp += _sp_move_rate * dt;
+
+		//for test on time
+		_hover_time += dt;
+		if(_hover_time > hover_time_constant)
+		{
+			_hover_time = 0.0f;
+			_mode_mission = 2;
+		}
+	//}else if(_ros.flight_mode==2)
+	}else if(_mode_mission == 2)	
+	{
+		_pos_sp(0) = 0.5;
+		_pos_sp(1) = 0.5;
+		_pos_sp(2) = -1.0;
+
+		//for test on time
+		_hover_time += dt;		
+		if(_hover_time > hover_time_constant+10.0f)
+		{
+			_hover_time = 0.0f;
+			_mode_mission = 3;
+		}
+	//}else if(_ros.flight_mode==3)
+	}else if(_mode_mission == 3)	
+	{
+		_pos_sp_triplet.current.type = position_setpoint_s::SETPOINT_TYPE_LAND;
+
+	}else if(_mode_mission == 4){
+		_pos_sp_triplet.current.type = position_setpoint_s::SETPOINT_TYPE_LAND;
+		_control_mode.flag_control_position_enabled = false ;
+		_control_mode.flag_control_velocity_enabled = false ;
+	}
+	else
+	{
+		reset_pos_sp();
+		reset_alt_sp();
+	}
+
+	/* check if position setpoint is too far from actual position */
+	math::Vector<3> pos_sp_offs;
+	pos_sp_offs.zero();
+
+	if (_control_mode.flag_control_position_enabled) {
+		pos_sp_offs(0) = (_pos_sp(0) - _pos(0)) / _params.sp_offs_max(0);
+		pos_sp_offs(1) = (_pos_sp(1) - _pos(1)) / _params.sp_offs_max(1);
+	}
+
+	if (_control_mode.flag_control_altitude_enabled) {
+		pos_sp_offs(2) = (_pos_sp(2) - _pos(2)) / _params.sp_offs_max(2);
+	}
+
+	float pos_sp_offs_norm = pos_sp_offs.length();
+
+	if (pos_sp_offs_norm > 1.0f) {
+		pos_sp_offs /= pos_sp_offs_norm;
+		_pos_sp = _pos + pos_sp_offs.emult(_params.sp_offs_max);
+	}
+}
 
 void
 MulticopterPositionControl::control_manual(float dt)
@@ -609,37 +769,8 @@ MulticopterPositionControl::control_manual(float dt)
 	_sp_move_rate.zero();
 
 	if (_control_mode.flag_control_altitude_enabled) {
-		if(_reset_mission)
-		{
-			_reset_mission = false;
-			_mode_mission = 1 ;
-			_hover_time = 0.0 ;
-		}
-		float height_hover_constant=-1.0;
-		float hover_time_constant = 20.0;
-		switch(_mode_mission)
-		{	
-			case 1:
-				_sp_move_rate(2) = -0.8;
-				if(_pos_sp(2)<=height_hover_constant)
-					_mode_mission=2;
-				break;
-			case 2:
-				_hover_time += dt;
-				if(_hover_time>hover_time_constant)
-				{
-					_hover_time=0.0;
-					_mode_mission=3;
-				}
-				break;
-			case 3:
-				_pos_sp_triplet.current.type =position_setpoint_s::SETPOINT_TYPE_LAND;
-				break;
-			default:
-				/* move altitude setpoint with throttle stick */
-				_sp_move_rate(2) = -scale_control(_manual.z - 0.5f, 0.5f, alt_ctl_dz);
-				break;
-		}
+			/* move altitude setpoint with throttle stick */
+			_sp_move_rate(2) = -scale_control(_manual.z - 0.5f, 0.5f, alt_ctl_dz);
 	}
 
 	if (_control_mode.flag_control_position_enabled) {
@@ -940,7 +1071,8 @@ MulticopterPositionControl::task_main()
 	_pos_sp_triplet_sub = orb_subscribe(ORB_ID(position_setpoint_triplet));
 	_local_pos_sp_sub = orb_subscribe(ORB_ID(vehicle_local_position_setpoint));
 	_global_vel_sp_sub = orb_subscribe(ORB_ID(vehicle_global_velocity_setpoint));
-
+	_ros_sub = orb_subscribe(ORB_ID(ros_estimate_path));
+	//_vicon_sub = orb_subscribe(ORB_ID(ros_estimate_path));
 
 	parameters_update(true);
 
@@ -958,7 +1090,15 @@ MulticopterPositionControl::task_main()
 
 	hrt_abstime t_prev = 0;
 	_hover_time = 0.0; // miao:
+	_UWBdata_loss_time = 0.0;
 	_mode_mission = 1;
+	_flag_ros = true ; //default ros mode
+	_send_UWB_data_frq = 0.0f ;
+	if (isfinite(_att.yaw)) 
+		_UWB_init_yaw = _att.yaw ;
+	else
+		_UWB_init_yaw = 0.0;
+
 	math::Vector<3> thrust_int;
 	thrust_int.zero();
 	math::Matrix<3, 3> R;
@@ -1011,22 +1151,39 @@ MulticopterPositionControl::task_main()
 		    _control_mode.flag_control_position_enabled ||
 		    _control_mode.flag_control_climb_rate_enabled ||
 		    _control_mode.flag_control_velocity_enabled) {
+			if(_flag_ros)
+			{
+				if(fabs(_ros.x)>0.001 || fabs(_ros.y)>0.001 ){
+					_pos(0) = cosf(_UWB_init_yaw)*_ros.x - sinf(_UWB_init_yaw)*_ros.y;
+					_pos(1) = sinf(_UWB_init_yaw)*_ros.x + cosf(_UWB_init_yaw)*_ros.y;
+					_vel(0) = cosf(_UWB_init_yaw)*_ros.vx - sinf(_UWB_init_yaw)*_ros.vy;
+					_vel(1) = sinf(_UWB_init_yaw)*_ros.vx + cosf(_UWB_init_yaw)*_ros.vy;
+				}
+				//_pos(0) = _ros.x;
+				//_pos(1) = _ros.y;
+				//_pos(2) = _ros.z;
+				_pos(2) = _local_pos.z;
+				//_vel(0) = _ros.vx;
+				//_vel(1) = _ros.vy;
+				//_vel(2) = _ros.vz;
+				_vel(2) = _local_pos.vz;
 
-			_pos(0) = _local_pos.x;
-			_pos(1) = _local_pos.y;
-			_pos(2) = _local_pos.z;
+			}else{				
+				_pos(0) = _local_pos.x;
+				_pos(1) = _local_pos.y;
+				_pos(2) = _local_pos.z;
 
-			_vel(0) = _local_pos.vx;
-			_vel(1) = _local_pos.vy;
-			_vel(2) = _local_pos.vz;
-
+				_vel(0) = _local_pos.vx;
+				_vel(1) = _local_pos.vy;
+				_vel(2) = _local_pos.vz;	
+			}
 			_vel_ff.zero();
 			_sp_move_rate.zero();
 
 			/* select control source */
 			if (_control_mode.flag_control_manual_enabled) {
-				/* manual control */
-				control_manual(dt);
+				/* manual control */							
+				control_manual(dt);				
 				_mode_auto = false;
 
 			} else if (_control_mode.flag_control_offboard_enabled) {
@@ -1036,7 +1193,10 @@ MulticopterPositionControl::task_main()
 
 			} else {
 				/* AUTO */
-				control_auto(dt);
+				if(_flag_ros)
+					control_auto_indoor(dt);
+				else
+					control_auto(dt);
 			}
 
 			if (!_control_mode.flag_control_manual_enabled && _pos_sp_triplet.current.valid && _pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_IDLE) {
@@ -1080,7 +1240,7 @@ MulticopterPositionControl::task_main()
 				/* use constant descend rate when landing, ignore altitude setpoint */
 				//if (!_control_mode.flag_control_manual_enabled && _pos_sp_triplet.current.valid && _pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_LAND) {
 				// miao: for auto landing test with manual mode
-				if (_mode_mission==3) {
+				if (_mode_mission == 3 || _mode_mission == 4) {
 					_vel_sp(2) = _params.land_speed;
 				}
 

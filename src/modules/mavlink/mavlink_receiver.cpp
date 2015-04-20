@@ -116,6 +116,7 @@ MavlinkReceiver::MavlinkReceiver(Mavlink *parent) :
 	_force_sp_pub(-1),
 	_pos_sp_triplet_pub(-1),
 	_vicon_position_pub(-1),
+	_ros_pub(-1),
 	_vision_position_pub(-1),
 	_telemetry_status_pub(-1),
 	_rc_pub(-1),
@@ -209,6 +210,9 @@ MavlinkReceiver::handle_message(mavlink_message_t *msg)
 		handle_message_timesync(msg);
 		break;
 
+	case MAVLINK_MSG_ID_ROS_ESTIMATION_PATH:
+		handle_message_ros_estimate_path(msg);
+		break;
 	default:
 		break;
 	}
@@ -515,6 +519,36 @@ MavlinkReceiver::handle_message_vicon_position_estimate(mavlink_message_t *msg)
 
 	} else {
 		orb_publish(ORB_ID(vehicle_vicon_position), _vicon_position_pub, &vicon_position);
+	}
+}
+
+void
+MavlinkReceiver::handle_message_ros_estimate_path(mavlink_message_t *msg)
+{
+	mavlink_ros_estimation_path_t pos;
+	mavlink_msg_ros_estimation_path_decode(msg, &pos);
+
+	struct ros_estimate_path_s ros;
+	memset(&ros, 0, sizeof(ros));
+
+	ros.timestamp = hrt_absolute_time();
+	ros.x = pos.x;
+	ros.y = pos.y;
+	ros.z = pos.z;
+	ros.yaw = pos.yaw;
+	ros.vx = pos.vx;
+	ros.vy = pos.vy;
+	ros.vz = pos.vz;
+	ros.target_x = pos.target_x;
+	ros.target_y = pos.target_y;
+	ros.target_z = pos.target_z;
+	ros.target_yaw = pos.target_yaw;
+
+	if (_ros_pub < 0) {
+		_ros_pub = orb_advertise(ORB_ID(ros_estimate_path), &ros);
+
+	} else {
+		orb_publish(ORB_ID(ros_estimate_path), _ros_pub, &ros);
 	}
 }
 

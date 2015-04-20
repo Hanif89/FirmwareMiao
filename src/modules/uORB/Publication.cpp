@@ -50,6 +50,7 @@
 #include "topics/encoders.h"
 #include "topics/tecs_status.h"
 #include "topics/rc_channels.h"
+#include "topics/ros_estimate_path.h"
 
 namespace uORB {
 
@@ -82,5 +83,6 @@ template class __EXPORT Publication<actuator_direct_s>;
 template class __EXPORT Publication<encoders_s>;
 template class __EXPORT Publication<tecs_status_s>;
 template class __EXPORT Publication<rc_channels_s>;
+template class __EXPORT Publication<ros_estimate_path_s>;
 
 }
