@@ -44,6 +44,8 @@
 #include <math.h>
 #include <algorithm>
 
+
+
 #ifndef M_PI_F
 #define M_PI_F static_cast<float>(M_PI)
 #endif
@@ -118,6 +120,8 @@ AttPosEKF::AttPosEKF() :
     baroHgtOffset(0.0f),
     rngMea(0.0f),
     rngVel(0.0f),
+    grdHug_factor(1.0f),
+    //InitializeDynamic_count(0),
     innovMag{},
     varInnovMag{},
     magData{},
@@ -1123,8 +1127,10 @@ void AttPosEKF::FuseVelposNED()
         R_OBS[3] = gpsVarianceScaler * sq(posNeSigma) + sq(posErr);
         R_OBS[4] = R_OBS[3];
         R_OBS[5] = hgtVarianceScaler * sq(posDSigma) + sq(posErr);
-        if(fuseRngData) R_OBS[2] = hgtVarianceScaler * sq(vdSigma) + sq(velErr);
-
+        if(fuseRngData) {
+            R_OBS[2] = hgtVarianceScaler * sq(vdSigma) + sq(velErr);
+            R_OBS[5] = hgtVarianceScaler * sq(posDSigma/grdHug_factor) + sq(posErr);
+        }
 
         // calculate innovations and check GPS data validity using an innovation consistency check
         if (fuseVelData)
@@ -1355,6 +1361,8 @@ void AttPosEKF::FuseMagnetometer()
         H_MAG[i] = 0.0f;
     }
 
+    static float magNE_mag, magDataE_N, magDataE_E, magDataE_D, magDataNE_mag, modMagData_x, modMagData_y, modMagData_z;
+
     // Perform sequential fusion of Magnetometer measurements.
     // This assumes that the errors in the different components are
     // uncorrelated which is not true, however in the absence of covariance
@@ -1392,6 +1400,28 @@ void AttPosEKF::FuseMagnetometer()
             MagPred[0] = DCM.x.x*magN + DCM.x.y*magE  + DCM.x.z*magD + magXbias;
             MagPred[1] = DCM.y.x*magN + DCM.y.y*magE  + DCM.y.z*magD + magYbias;
             MagPred[2] = DCM.z.x*magN + DCM.z.y*magE  + DCM.z.z*magD + magZbias;
+
+            // Hanif: Fit new data such that only yaw affected, 
+            // Explanation:
+                // calc magnitude of magN and magE 2D vector
+                // convert magData-magbias to earth coord (magDataE)
+                // calc magDataE horizontal 2D vector magnitude
+                // scale magDataE vector components to magN and magE
+                // magDataE.d = magD
+                // convert newmagDataE to body coord
+                // add magbias to newmagData
+            magNE_mag = sqrtf(magN*magN + magE+magE);
+            magDataE_N = DCM.x.x*(magData.x - magXbias) + DCM.y.x*(magData.y - magYbias) + DCM.z.x*(magData.z - magZbias);
+            magDataE_E = DCM.x.y*(magData.x - magXbias) + DCM.y.y*(magData.y - magYbias) + DCM.z.y*(magData.z - magZbias);
+            //magDataE_D = DCM.x.z*(magData.x - magXbias) + DCM.y.z*(magData.y - magYbias) + DCM.z.z*(magData.z - magZbias);
+            magDataNE_mag = sqrtf(magDataE_N*magDataE_N + magDataE_E*magDataE_E);
+            magDataE_N = magDataE_N / magDataNE_mag * magNE_mag;
+            magDataE_E = magDataE_E / magDataNE_mag * magNE_mag;
+            magDataE_D = magD;
+            modMagData_x = DCM.x.x*magDataE_N + DCM.x.y*magDataE_E  + DCM.x.z*magDataE_D + magXbias;
+            modMagData_y = DCM.y.x*magDataE_N + DCM.y.y*magDataE_E  + DCM.y.z*magDataE_D + magYbias;
+            modMagData_z = DCM.z.x*magDataE_N + DCM.z.y*magDataE_E  + DCM.z.z*magDataE_D + magZbias;
+
 
             // scale magnetometer observation error with total angular rate
             R_MAG = sq(magMeasurementSigma) + sq(0.05f*dAngIMU.length()/dtIMU);
@@ -1469,7 +1499,7 @@ void AttPosEKF::FuseMagnetometer()
                 }
             }
             varInnovMag[0] = 1.0f/SK_MX[0];
-            innovMag[0] = MagPred[0] - magData.x;
+            innovMag[0] = MagPred[0] - modMagData_x;
         }
         else if (obsIndex == 1) // we are now fusing the Y measurement
         {
@@ -1538,7 +1568,7 @@ void AttPosEKF::FuseMagnetometer()
                 Kfusion[21] = 0;
             }
             varInnovMag[1] = 1.0f/SK_MY[0];
-            innovMag[1] = MagPred[1] - magData.y;
+            innovMag[1] = MagPred[1] - modMagData_y;
         }
         else if (obsIndex == 2) // we are now fusing the Z measurement
         {
@@ -1608,7 +1638,7 @@ void AttPosEKF::FuseMagnetometer()
                 Kfusion[21] = 0;
             }
             varInnovMag[2] = 1.0f/SK_MZ[0];
-            innovMag[2] = MagPred[2] - magData.z;
+            innovMag[2] = MagPred[2] - modMagData_z;
 
         }
 
@@ -2801,6 +2831,7 @@ void AttPosEKF::ForceSymmetry()
                 current_ekf_state.covariancesExcessive = true;
                 current_ekf_state.error |= true;
                 InitializeDynamic(velNED, magDeclination);
+                //InitializeDynamic_count++;
                 return;
             }
 
