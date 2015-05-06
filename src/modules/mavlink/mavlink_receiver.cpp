@@ -131,7 +131,8 @@ MavlinkReceiver::MavlinkReceiver(Mavlink *parent) :
 	_offboard_control_mode{},
 	_rates_sp{},
 	_time_offset_avg_alpha(0.6),
-	_time_offset(0)
+	_time_offset(0),	
+	_ros_initialized(0)
 {
 
 	// make sure the FTP server is started
@@ -530,6 +531,8 @@ MavlinkReceiver::handle_message_ros_estimate_path(mavlink_message_t *msg)
 
 	struct ros_estimate_path_s ros;
 	memset(&ros, 0, sizeof(ros));
+	struct vehicle_gps_position_s hil_gps;
+	memset(&hil_gps, 0, sizeof(hil_gps));
 
 	ros.timestamp = hrt_absolute_time();
 	ros.x = pos.x;
@@ -543,12 +546,53 @@ MavlinkReceiver::handle_message_ros_estimate_path(mavlink_message_t *msg)
 	ros.target_y = pos.target_y;
 	ros.target_z = pos.target_z;
 	ros.target_yaw = pos.target_yaw;
+	ros.flight_mode = pos.flight_mode;
+	if(ros.flight_mode>0)
+	{
+		if (_ros_pub < 0) {
+			_ros_pub = orb_advertise(ORB_ID(ros_estimate_path), &ros);
 
-	if (_ros_pub < 0) {
-		_ros_pub = orb_advertise(ORB_ID(ros_estimate_path), &ros);
+		} else {
+			orb_publish(ORB_ID(ros_estimate_path), _ros_pub, &ros);
+		}
+		if(!_ros_initialized){
+			map_projection_init(&_hil_local_proj_ref, 1.342825, 103.679892);
+			_ros_initialized = true;
+		}
+		double lat ;
+		double lon ;
+		map_projection_reproject(&_hil_local_proj_ref, ros.x, ros.y, &lat, &lon);	
+		hil_gps.lat = lat  * 1.0e7;
+		hil_gps.lon = lon  * 1.0e7;
 
-	} else {
-		orb_publish(ORB_ID(ros_estimate_path), _ros_pub, &ros);
+		hil_gps.timestamp_time = ros.timestamp;
+		hil_gps.time_utc_usec = ros.timestamp;
+		hil_gps.timestamp_position = ros.timestamp;
+		
+		hil_gps.alt = -ros.z* 1e3f;
+		hil_gps.eph = (float)1.0 * 1e-2f; // from cm to m
+		hil_gps.epv = (float)1.0 * 1e-2f; // from cm to m
+
+		hil_gps.timestamp_variance = ros.timestamp;
+		hil_gps.s_variance_m_s = 5.0f;
+
+		hil_gps.timestamp_velocity = ros.timestamp;
+		hil_gps.vel_m_s = (float)10.0 * 1e-2f; // from cm/s to m/s
+		hil_gps.vel_n_m_s = ros.vx ; 
+		hil_gps.vel_e_m_s = ros.vy ; 
+		hil_gps.vel_d_m_s = ros.vz ; 
+		hil_gps.vel_ned_valid = true;
+		hil_gps.cog_rad = ros.yaw;//_wrap_pi(ros.yaw);
+
+		hil_gps.fix_type = 3;
+		hil_gps.satellites_used = 10;  //TODO: rename mavlink_hil_gps_t sats visible to used?
+
+		if (_gps_pub < 0) {
+			_gps_pub = orb_advertise(ORB_ID(vehicle_gps_position), &hil_gps);
+
+		} else {
+			orb_publish(ORB_ID(vehicle_gps_position), _gps_pub, &hil_gps);
+		}
 	}
 }
 
@@ -1504,7 +1548,7 @@ MavlinkReceiver::receive_thread(void *arg)
 	fds[0].fd = uart_fd;
 	fds[0].events = POLLIN;
 
-	ssize_t nread = 0;
+	ssize_t nread = 0;	
 
 	while (!_mavlink->_task_should_exit) {
 		if (poll(fds, 1, timeout) > 0) {

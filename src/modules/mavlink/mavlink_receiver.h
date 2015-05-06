@@ -190,6 +190,8 @@ private:
 	double _time_offset_avg_alpha;
 	uint64_t _time_offset;
 
+	bool _ros_initialized;
+
 	/* do not allow copying this class */
 	MavlinkReceiver(const MavlinkReceiver&);
 	MavlinkReceiver operator=(const MavlinkReceiver&);
