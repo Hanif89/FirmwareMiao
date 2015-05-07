@@ -27,150 +27,178 @@
 * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 * POSSIBILITY OF SUCH DAMAGE.
 ****************************************************************************/
+
 /**
-* @file estimator_utilities.cpp
-*
-* Estimator support utilities.
-*
-* @author Paul Riseborough <p_riseborough@live.com.au>
-* @author Lorenz Meier <lorenz@px4.io>
-*/
+ * @file estimator_utilities.cpp
+ *
+ * Estimator support utilities.
+ *
+ * @author Paul Riseborough <p_riseborough@live.com.au>
+ * @author Lorenz Meier <lorenz@px4.io>
+ */
+
 #include "estimator_utilities.h"
 #include <algorithm>
+
 // Define EKF_DEBUG here to enable the debug print calls
 // if the macro is not set, these will be completely
 // optimized out by the compiler.
 //#define EKF_DEBUG
+
 #ifdef EKF_DEBUG
 #include <stdio.h>
 #include <stdarg.h>
+
 static void
 ekf_debug_print(const char *fmt, va_list args)
 {
-fprintf(stderr, "%s: ", "[ekf]");
-vfprintf(stderr, fmt, args);
-fprintf(stderr, "\n");
+    fprintf(stderr, "%s: ", "[ekf]");
+    vfprintf(stderr, fmt, args);
+
+    fprintf(stderr, "\n");
 }
+
 void
 ekf_debug(const char *fmt, ...)
 {
-va_list args;
-va_start(args, fmt);
-ekf_debug_print(fmt, args);
+    va_list args;
+
+    va_start(args, fmt);
+    ekf_debug_print(fmt, args);
 }
+
 #else
+
 void ekf_debug(const char *fmt, ...) { while(0){} }
 #endif
+
 float Vector3f::length(void) const
 {
-return sqrt(x*x + y*y + z*z);
+    return sqrt(x*x + y*y + z*z);
 }
+
 void Vector3f::zero(void)
 {
-x = 0.0f;
-y = 0.0f;
-z = 0.0f;
+    x = 0.0f;
+    y = 0.0f;
+    z = 0.0f;
 }
+
 Mat3f::Mat3f() :
-x{1.0f, 0.0f, 0.0f},
-y{0.0f, 1.0f, 0.0f},
-z{0.0f, 0.0f, 1.0f}
+    x{1.0f, 0.0f, 0.0f},
+    y{0.0f, 1.0f, 0.0f},
+    z{0.0f, 0.0f, 1.0f}
 {
 }
+
 void Mat3f::identity() {
-x.x = 1.0f;
-x.y = 0.0f;
-x.z = 0.0f;
-y.x = 0.0f;
-y.y = 1.0f;
-y.z = 0.0f;
-z.x = 0.0f;
-z.y = 0.0f;
-z.z = 1.0f;
+    x.x = 1.0f;
+    x.y = 0.0f;
+    x.z = 0.0f;
+
+    y.x = 0.0f;
+    y.y = 1.0f;
+    y.z = 0.0f;
+
+    z.x = 0.0f;
+    z.y = 0.0f;
+    z.z = 1.0f;
 }
+
 Mat3f Mat3f::transpose() const
 {
-Mat3f ret = *this;
-std::swap(ret.x.y, ret.y.x);
-std::swap(ret.x.z, ret.z.x);
-std::swap(ret.y.z, ret.z.y);
-return ret;
+    Mat3f ret = *this;
+    std::swap(ret.x.y, ret.y.x);
+    std::swap(ret.x.z, ret.z.x);
+    std::swap(ret.y.z, ret.z.y);
+    return ret;
 }
+
 // overload + operator to provide a vector addition
 Vector3f operator+(const Vector3f &vecIn1, const Vector3f &vecIn2)
 {
-Vector3f vecOut;
-vecOut.x = vecIn1.x + vecIn2.x;
-vecOut.y = vecIn1.y + vecIn2.y;
-vecOut.z = vecIn1.z + vecIn2.z;
-return vecOut;
+    Vector3f vecOut;
+    vecOut.x = vecIn1.x + vecIn2.x;
+    vecOut.y = vecIn1.y + vecIn2.y;
+    vecOut.z = vecIn1.z + vecIn2.z;
+    return vecOut;
 }
+
 // overload - operator to provide a vector subtraction
 Vector3f operator-(const Vector3f &vecIn1, const Vector3f &vecIn2)
 {
-Vector3f vecOut;
-vecOut.x = vecIn1.x - vecIn2.x;
-vecOut.y = vecIn1.y - vecIn2.y;
-vecOut.z = vecIn1.z - vecIn2.z;
-return vecOut;
+    Vector3f vecOut;
+    vecOut.x = vecIn1.x - vecIn2.x;
+    vecOut.y = vecIn1.y - vecIn2.y;
+    vecOut.z = vecIn1.z - vecIn2.z;
+    return vecOut;
 }
+
 // overload * operator to provide a matrix vector product
 Vector3f operator*(const Mat3f &matIn, const Vector3f &vecIn)
 {
-Vector3f vecOut;
-vecOut.x = matIn.x.x*vecIn.x + matIn.x.y*vecIn.y + matIn.x.z*vecIn.z;
-vecOut.y = matIn.y.x*vecIn.x + matIn.y.y*vecIn.y + matIn.y.z*vecIn.z;
-vecOut.z = matIn.x.x*vecIn.x + matIn.z.y*vecIn.y + matIn.z.z*vecIn.z;
-return vecOut;
+    Vector3f vecOut;
+    vecOut.x = matIn.x.x*vecIn.x + matIn.x.y*vecIn.y + matIn.x.z*vecIn.z;
+    vecOut.y = matIn.y.x*vecIn.x + matIn.y.y*vecIn.y + matIn.y.z*vecIn.z;
+    vecOut.z = matIn.x.x*vecIn.x + matIn.z.y*vecIn.y + matIn.z.z*vecIn.z;
+    return vecOut;
 }
+
 // overload * operator to provide a matrix product
 Mat3f operator*(const Mat3f &matIn1, const Mat3f &matIn2)
 {
-Mat3f matOut;
-matOut.x.x = matIn1.x.x*matIn2.x.x + matIn1.x.y*matIn2.y.x + matIn1.x.z*matIn2.z.x;
-matOut.x.y = matIn1.x.x*matIn2.x.y + matIn1.x.y*matIn2.y.y + matIn1.x.z*matIn2.z.y;
-matOut.x.z = matIn1.x.x*matIn2.x.z + matIn1.x.y*matIn2.y.z + matIn1.x.z*matIn2.z.z;
-matOut.y.x = matIn1.y.x*matIn2.x.x + matIn1.y.y*matIn2.y.x + matIn1.y.z*matIn2.z.x;
-matOut.y.y = matIn1.y.x*matIn2.x.y + matIn1.y.y*matIn2.y.y + matIn1.y.z*matIn2.z.y;
-matOut.y.z = matIn1.y.x*matIn2.x.z + matIn1.y.y*matIn2.y.z + matIn1.y.z*matIn2.z.z;
-matOut.z.x = matIn1.z.x*matIn2.x.x + matIn1.z.y*matIn2.y.x + matIn1.z.z*matIn2.z.x;
-matOut.z.y = matIn1.z.x*matIn2.x.y + matIn1.z.y*matIn2.y.y + matIn1.z.z*matIn2.z.y;
-matOut.z.z = matIn1.z.x*matIn2.x.z + matIn1.z.y*matIn2.y.z + matIn1.z.z*matIn2.z.z;
-return matOut;
+    Mat3f matOut;
+    matOut.x.x = matIn1.x.x*matIn2.x.x + matIn1.x.y*matIn2.y.x + matIn1.x.z*matIn2.z.x;
+    matOut.x.y = matIn1.x.x*matIn2.x.y + matIn1.x.y*matIn2.y.y + matIn1.x.z*matIn2.z.y;
+    matOut.x.z = matIn1.x.x*matIn2.x.z + matIn1.x.y*matIn2.y.z + matIn1.x.z*matIn2.z.z;
+
+    matOut.y.x = matIn1.y.x*matIn2.x.x + matIn1.y.y*matIn2.y.x + matIn1.y.z*matIn2.z.x;
+    matOut.y.y = matIn1.y.x*matIn2.x.y + matIn1.y.y*matIn2.y.y + matIn1.y.z*matIn2.z.y;
+    matOut.y.z = matIn1.y.x*matIn2.x.z + matIn1.y.y*matIn2.y.z + matIn1.y.z*matIn2.z.z;
+
+    matOut.z.x = matIn1.z.x*matIn2.x.x + matIn1.z.y*matIn2.y.x + matIn1.z.z*matIn2.z.x;
+    matOut.z.y = matIn1.z.x*matIn2.x.y + matIn1.z.y*matIn2.y.y + matIn1.z.z*matIn2.z.y;
+    matOut.z.z = matIn1.z.x*matIn2.x.z + matIn1.z.y*matIn2.y.z + matIn1.z.z*matIn2.z.z;
+
+    return matOut;
 }
+
 // overload % operator to provide a vector cross product
 Vector3f operator%(const Vector3f &vecIn1, const Vector3f &vecIn2)
 {
-Vector3f vecOut;
-vecOut.x = vecIn1.y*vecIn2.z - vecIn1.z*vecIn2.y;
-vecOut.y = vecIn1.z*vecIn2.x - vecIn1.x*vecIn2.z;
-vecOut.z = vecIn1.x*vecIn2.y - vecIn1.y*vecIn2.x;
-return vecOut;
+    Vector3f vecOut;
+    vecOut.x = vecIn1.y*vecIn2.z - vecIn1.z*vecIn2.y;
+    vecOut.y = vecIn1.z*vecIn2.x - vecIn1.x*vecIn2.z;
+    vecOut.z = vecIn1.x*vecIn2.y - vecIn1.y*vecIn2.x;
+    return vecOut;
 }
+
 // overload * operator to provide a vector scaler product
 Vector3f operator*(const Vector3f &vecIn1, const float sclIn1)
 {
-Vector3f vecOut;
-vecOut.x = vecIn1.x * sclIn1;
-vecOut.y = vecIn1.y * sclIn1;
-vecOut.z = vecIn1.z * sclIn1;
-return vecOut;
+    Vector3f vecOut;
+    vecOut.x = vecIn1.x * sclIn1;
+    vecOut.y = vecIn1.y * sclIn1;
+    vecOut.z = vecIn1.z * sclIn1;
+    return vecOut;
 }
+
 // overload * operator to provide a vector scaler product
 Vector3f operator*(float sclIn1, const Vector3f &vecIn1)
 {
-Vector3f vecOut;
-vecOut.x = vecIn1.x * sclIn1;
-vecOut.y = vecIn1.y * sclIn1;
-vecOut.z = vecIn1.z * sclIn1;
-return vecOut;
+    Vector3f vecOut;
+    vecOut.x = vecIn1.x * sclIn1;
+    vecOut.y = vecIn1.y * sclIn1;
+    vecOut.z = vecIn1.z * sclIn1;
+    return vecOut;
 }
+
 // overload / operator to provide a vector scalar division
 Vector3f operator/(const Vector3f &vec, const float scalar)
 {
-Vector3f vecOut;
-vecOut.x = vec.x / scalar;
-vecOut.y = vec.y / scalar;
-vecOut.z = vec.z / scalar;
-return vecOut;
+    Vector3f vecOut;
+    vecOut.x = vec.x / scalar;
+    vecOut.y = vec.y / scalar;
+    vecOut.z = vec.z / scalar;
+    return vecOut;
 }

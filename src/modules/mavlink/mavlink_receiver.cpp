@@ -570,8 +570,8 @@ MavlinkReceiver::handle_message_ros_estimate_path(mavlink_message_t *msg)
 		hil_gps.timestamp_position = ros.timestamp;
 		
 		hil_gps.alt = -ros.z* 1e3f;
-		hil_gps.eph = (float)1.0 * 1e-2f; // from cm to m
-		hil_gps.epv = (float)1.0 * 1e-2f; // from cm to m
+		hil_gps.eph = (float)10.0 * 1e-2f; // from cm to m
+		hil_gps.epv = (float)10.0 * 1e-2f; // from cm to m
 
 		hil_gps.timestamp_variance = ros.timestamp;
 		hil_gps.s_variance_m_s = 5.0f;
@@ -585,7 +585,7 @@ MavlinkReceiver::handle_message_ros_estimate_path(mavlink_message_t *msg)
 		hil_gps.cog_rad = ros.yaw;//_wrap_pi(ros.yaw);
 
 		hil_gps.fix_type = 3;
-		hil_gps.satellites_used = 10;  //TODO: rename mavlink_hil_gps_t sats visible to used?
+		hil_gps.satellites_used = 8;  //TODO: rename mavlink_hil_gps_t sats visible to used?
 
 		if (_gps_pub < 0) {
 			_gps_pub = orb_advertise(ORB_ID(vehicle_gps_position), &hil_gps);

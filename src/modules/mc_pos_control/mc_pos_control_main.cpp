@@ -553,7 +553,7 @@ MulticopterPositionControl::poll_subscriptions()
 
 		_UWBdata_loss_time = 0.0 ;
 
-	}else{ // miao: 18-4-2015 , data loss protect
+	}/*else{ // miao: 18-4-2015 , data loss protect
 		if(_control_mode.flag_control_position_enabled && _flag_ros ){
 			_UWBdata_loss_time += 0.05f ;
 			if(_UWBdata_loss_time > 2.0f) // data loss 2 seconds, will land
@@ -562,7 +562,7 @@ MulticopterPositionControl::poll_subscriptions()
 				//_UWBdata_loss_time = 0.0 ;				
 			}
 		}		
-	}
+	}*/
 }
 
 float
@@ -1194,9 +1194,9 @@ MulticopterPositionControl::task_main()
 			/* select control source */
 			if (_control_mode.flag_control_manual_enabled) {
 				/* manual control */
-				if(_control_mode.flag_control_position_enabled)							
-					control_auto_indoor(dt);	
-				else
+				//if(_control_mode.flag_control_position_enabled)							
+				//	control_auto_indoor(dt);	
+				//else
 					control_manual(dt);			
 				_mode_auto = false;
 
@@ -1212,12 +1212,13 @@ MulticopterPositionControl::task_main()
 				else
 					control_auto(dt);
 			}
+			/*
 			_send_att_sp_data_frq += dt;
 			if(_send_att_sp_data_frq >= 5.0f){
 				_send_att_sp_data_frq = 0.0f;
 				mavlink_log_info(_mavlink_fd, "|||:x%3.2f,y%3.2f,z%3.2f,y%3.2f,vx%3.2f,vy%3.2f,vz%3.2f",
 						(double)_pos(0), (double)_pos(1),(double)_pos(2),(double)(_UWB_init_yaw*180/PI),(double)_vel(0),(double)_vel(1),(double)_vel(2));
-			}			
+			}	*/		
 			/*_send_pos_sp_data_frq += dt;
 			if(_send_pos_sp_data_frq >= 5.0f){
 				_send_pos_sp_data_frq = 0.0f;
@@ -1630,13 +1631,13 @@ MulticopterPositionControl::task_main()
 
 		/* reset altitude controller integral (hovering throttle) to manual throttle after manual throttle control */
 		reset_int_z_manual = _control_mode.flag_armed && _control_mode.flag_control_manual_enabled && !_control_mode.flag_control_climb_rate_enabled;
-		
+		/*
 		_send_att_sp_data_frq += dt;
 		if(_send_att_sp_data_frq >= 5.0f){
 			_send_att_sp_data_frq = 0.0f;
 			mavlink_log_info(_mavlink_fd, "att_sp:r%3.2f,p%3.2f,y%3.2f,th%3.2f",
 					(double)(_att_sp.roll_body*180/PI), (double)(_att_sp.pitch_body*180/PI),(double)(_att_sp.yaw_body*180/PI),(double)_att_sp.thrust);
-		}
+		}*/
 	}
 
 	warnx("stopped");
