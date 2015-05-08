@@ -428,7 +428,7 @@ BlinkM::led()
 		orb_set_interval(actuator_armed_sub_fd, 250);
 
 		vehicle_gps_position_sub_fd = orb_subscribe(ORB_ID(vehicle_gps_position));
-		orb_set_interval(vehicle_gps_position_sub_fd, 250);
+		orb_set_interval(vehicle_gps_position_sub_fd, 250);//miao: 20150507, default:250
 
 		/* Subscribe to safety topic */
 		safety_sub_fd = orb_subscribe(ORB_ID(safety));

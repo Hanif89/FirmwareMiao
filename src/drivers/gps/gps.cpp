@@ -366,8 +366,8 @@ GPS::task_main()
 						if (helper_ret & 1) {
 
 							if (_report_gps_pos_pub > 0) {
-								orb_publish(ORB_ID(vehicle_gps_position), _report_gps_pos_pub, &_report_gps_pos);
-
+								//orb_publish(ORB_ID(vehicle_gps_position), _report_gps_pos_pub, &_report_gps_pos);
+								//miao:
 							} else {
 								_report_gps_pos_pub = orb_advertise(ORB_ID(vehicle_gps_position), &_report_gps_pos);
 							}

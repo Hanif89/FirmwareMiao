@@ -570,14 +570,14 @@ MavlinkReceiver::handle_message_ros_estimate_path(mavlink_message_t *msg)
 		hil_gps.timestamp_position = ros.timestamp;
 		
 		hil_gps.alt = -ros.z* 1e3f;
-		hil_gps.eph = (float)10.0 * 1e-2f; // from cm to m
-		hil_gps.epv = (float)10.0 * 1e-2f; // from cm to m
+		hil_gps.eph = (float)4.0 * 1e-2f; // from cm to m
+		hil_gps.epv = (float)4.0 * 1e-2f; // from cm to m
 
 		hil_gps.timestamp_variance = ros.timestamp;
 		hil_gps.s_variance_m_s = 5.0f;
 
 		hil_gps.timestamp_velocity = ros.timestamp;
-		hil_gps.vel_m_s = (float)10.0 * 1e-2f; // from cm/s to m/s
+		hil_gps.vel_m_s = (float)4.0 * 1e-2f; // from cm/s to m/s
 		hil_gps.vel_n_m_s = ros.vx ; 
 		hil_gps.vel_e_m_s = ros.vy ; 
 		hil_gps.vel_d_m_s = ros.vz ; 

@@ -1326,6 +1326,7 @@ void AttitudePositionEstimatorEKF::pollData()
 
 		} else {
 			_gpsIsGood = false;
+			mavlink_log_info(_mavlink_fd, "[_gpsIsNoGood %d,%3.2f,%3.2f",_gps.fix_type,(double)_gps.eph,(double)_gps.epv);
 		}
 
 		if (_gpsIsGood) {

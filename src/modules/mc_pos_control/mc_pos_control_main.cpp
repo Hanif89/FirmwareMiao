@@ -215,6 +215,8 @@ private:
 	bool _reset_pos_sp;
 	bool _reset_alt_sp;
 	bool _mode_auto;
+	hrt_abstime t_prev_UWB;
+	bool _UWB_initialed;
 
 	math::Vector<3> _pos;
 	math::Vector<3> _pos_sp;
@@ -541,6 +543,11 @@ MulticopterPositionControl::poll_subscriptions()
 		if(_ros.flight_mode == 0){
 				mavlink_log_info(_mavlink_fd, "ros: data loss");
 		}
+		hrt_abstime tt = hrt_absolute_time();
+		//float ddt = tt - t_prev_UWB;
+		t_prev_UWB = tt ;
+		if(!_UWB_initialed)
+			_UWB_initialed = true;
 		_send_UWB_data_frq += 0.2f ;
 		if(_send_UWB_data_frq >= 2.0f){
 			_send_UWB_data_frq = 0.0f;
@@ -553,7 +560,18 @@ MulticopterPositionControl::poll_subscriptions()
 
 		_UWBdata_loss_time = 0.0 ;
 
-	}/*else{ // miao: 18-4-2015 , data loss protect
+	}
+	if(_UWB_initialed){
+		hrt_abstime tt1 = hrt_absolute_time();
+		float ddt1 = (tt1 - t_prev_UWB)/1000.0;
+		//t_prev_UWB = tt1;
+		if(ddt1 > 500){
+			mavlink_log_info(_mavlink_fd, "UWB loss time:%3.2f",(double)ddt1);
+		}
+		if(ddt1>10000)
+			_UWB_initialed = false;
+	}
+	/*else{ // miao: 18-4-2015 , data loss protect
 		if(_control_mode.flag_control_position_enabled && _flag_ros ){
 			_UWBdata_loss_time += 0.05f ;
 			if(_UWBdata_loss_time > 2.0f) // data loss 2 seconds, will land
@@ -712,7 +730,7 @@ MulticopterPositionControl::control_auto_indoor(float dt)
 		if(_hover_time > hover_time_constant)
 		{
 			_hover_time = 0.0f;
-			_mode_mission = 3;
+			_mode_mission = 2;
 		}
 	//}else if(_ros.flight_mode==2)
 	}else if(_mode_mission == 2)	
@@ -726,15 +744,15 @@ MulticopterPositionControl::control_auto_indoor(float dt)
 		if(_hover_time > hover_time_constant+10.0f)
 		{
 			_hover_time = 0.0f;
-			_mode_mission = 2;//3;// test for position control
+			_mode_mission = 3;//3;// test for position control
 		}
 	//}else if(_ros.flight_mode==3)
 	}else if(_mode_mission == 3)	
 	{
-		_pos_sp_triplet.current.type = position_setpoint_s::SETPOINT_TYPE_LAND;
+		;//_pos_sp_triplet.current.type = position_setpoint_s::SETPOINT_TYPE_LAND;
 
 	}else {
-		_pos_sp_triplet.current.type = position_setpoint_s::SETPOINT_TYPE_LAND;
+		//_pos_sp_triplet.current.type = position_setpoint_s::SETPOINT_TYPE_LAND;
 		_control_mode.flag_control_position_enabled = false ;
 		_control_mode.flag_control_velocity_enabled = false ;
 	}
@@ -1103,6 +1121,8 @@ MulticopterPositionControl::task_main()
 	_send_UWB_data_frq = 0.0f ;
 	_send_att_sp_data_frq = 0.0f ;
 	_send_pos_sp_data_frq = 0.0f ;
+	t_prev_UWB = 0 ;
+	_UWB_initialed = false;
 	if (isfinite(_att.yaw)) 
 		_UWB_init_yaw = _att.yaw ;
 	else
