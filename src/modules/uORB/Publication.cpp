@@ -50,7 +50,7 @@
 #include "topics/encoders.h"
 #include "topics/tecs_status.h"
 #include "topics/rc_channels.h"
-#include "topics/ros_estimate_path_.h"
+#include "topics/ros_estimate_path.h"
 
 namespace uORB {
 

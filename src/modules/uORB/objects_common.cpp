@@ -251,5 +251,5 @@ ORB_DEFINE(wind_estimate, struct wind_estimate_s);
 #include "topics/rc_parameter_map.h"
 ORB_DEFINE(rc_parameter_map, struct rc_parameter_map_s);
 
-#include "topics/ros_estimate_path_.h"
+#include "topics/ros_estimate_path.h"
 ORB_DEFINE(ros_estimate_path, struct ros_estimate_path_s);
