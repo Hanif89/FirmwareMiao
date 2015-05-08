@@ -73,7 +73,7 @@
 #include <uORB/topics/airspeed.h>
 #include <uORB/topics/battery_status.h>
 #include <uORB/topics/vehicle_force_setpoint.h>
-#include <uORB/topics/ros_estimate_path.h>
+#include <uORB/topics/ros_estimate_path_.h>
 
 #include "mavlink_ftp.h"
 

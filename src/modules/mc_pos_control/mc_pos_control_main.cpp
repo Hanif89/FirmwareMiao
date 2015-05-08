@@ -73,7 +73,7 @@
 #include <uORB/topics/position_setpoint_triplet.h>
 #include <uORB/topics/vehicle_global_velocity_setpoint.h>
 #include <uORB/topics/vehicle_local_position_setpoint.h>
-#include <uORB/topics/ros_estimate_path.h>
+#include <uORB/topics/ros_estimate_path_.h>
 #include <uORB/topics/vehicle_vicon_position.h>
 
 #include <systemlib/systemlib.h>
