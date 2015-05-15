@@ -132,7 +132,9 @@ MavlinkReceiver::MavlinkReceiver(Mavlink *parent) :
 	_rates_sp{},
 	_time_offset_avg_alpha(0.6),
 	_time_offset(0),	
-	_ros_initialized(0)
+	_ros_initialized(0),
+	//_ros_timestamp(0),
+	_ros_no(0)
 {
 
 	// make sure the FTP server is started
@@ -534,6 +536,9 @@ MavlinkReceiver::handle_message_ros_estimate_path(mavlink_message_t *msg)
 	struct vehicle_gps_position_s hil_gps;
 	memset(&hil_gps, 0, sizeof(hil_gps));
 
+	struct vehicle_vicon_position_s vicon_position;
+	memset(&vicon_position, 0, sizeof(vicon_position));
+
 	ros.timestamp = hrt_absolute_time();
 	ros.x = pos.x;
 	ros.y = pos.y;
@@ -547,18 +552,24 @@ MavlinkReceiver::handle_message_ros_estimate_path(mavlink_message_t *msg)
 	ros.target_z = pos.target_z;
 	ros.target_yaw = pos.target_yaw;
 	ros.flight_mode = pos.flight_mode;
-	if(ros.flight_mode>0)
+	if((ros.flight_mode>=0))// && (_old_timestamp!=pos.usec))
+	//if((uint64_t)pos.flight_mode!=_old_timestamp)
 	{
+		//_old_timestamp = pos.flight_mode;//pos.usec;
+		if(!_ros_initialized){
+			map_projection_init(&_hil_local_proj_ref, 1.342825, 103.679892);
+			_ros_initialized = true;
+			_ros_no = 0 ;
+		}
+		_ros_no = _ros_no + 1.0f;
+		ros.target_z = _ros_no;
+
 		if (_ros_pub < 0) {
 			_ros_pub = orb_advertise(ORB_ID(ros_estimate_path), &ros);
 
 		} else {
 			orb_publish(ORB_ID(ros_estimate_path), _ros_pub, &ros);
-		}
-		if(!_ros_initialized){
-			map_projection_init(&_hil_local_proj_ref, 1.342825, 103.679892);
-			_ros_initialized = true;
-		}
+		}		
 		double lat ;
 		double lon ;
 		map_projection_reproject(&_hil_local_proj_ref, ros.x, ros.y, &lat, &lon);	
@@ -592,6 +603,21 @@ MavlinkReceiver::handle_message_ros_estimate_path(mavlink_message_t *msg)
 
 		} else {
 			orb_publish(ORB_ID(vehicle_gps_position), _gps_pub, &hil_gps);
+		}
+
+		vicon_position.timestamp = hrt_absolute_time();
+		vicon_position.x = pos.x;
+		vicon_position.y = pos.y;
+		vicon_position.z = pos.z;
+		vicon_position.roll = pos.vx;
+		vicon_position.pitch = pos.vy;
+		vicon_position.yaw = pos.yaw;
+
+		if (_vicon_position_pub < 0) {
+			_vicon_position_pub = orb_advertise(ORB_ID(vehicle_vicon_position), &vicon_position);
+
+		} else {
+			orb_publish(ORB_ID(vehicle_vicon_position), _vicon_position_pub, &vicon_position);
 		}
 	}
 }
@@ -1534,7 +1560,7 @@ MavlinkReceiver::receive_thread(void *arg)
 {
 	int uart_fd = _mavlink->get_uart_fd();
 
-	const int timeout = 500;
+	const int timeout = 500;//500;//miao:
 	uint8_t buf[32];
 
 	mavlink_message_t msg;

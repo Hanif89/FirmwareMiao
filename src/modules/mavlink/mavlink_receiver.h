@@ -191,6 +191,8 @@ private:
 	uint64_t _time_offset;
 
 	bool _ros_initialized;
+	float _ros_no;
+	//uint64_t _ros_timestamp;
 
 	/* do not allow copying this class */
 	MavlinkReceiver(const MavlinkReceiver&);

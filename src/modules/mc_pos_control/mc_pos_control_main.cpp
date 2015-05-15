@@ -217,6 +217,7 @@ private:
 	bool _mode_auto;
 	hrt_abstime t_prev_UWB;
 	bool _UWB_initialed;
+	int _num_UWB;
 
 	math::Vector<3> _pos;
 	math::Vector<3> _pos_sp;
@@ -548,7 +549,7 @@ MulticopterPositionControl::poll_subscriptions()
 		t_prev_UWB = tt ;
 		if(!_UWB_initialed)
 			_UWB_initialed = true;
-		_send_UWB_data_frq += 0.2f ;
+		_send_UWB_data_frq += 0.05f ;
 		if(_send_UWB_data_frq >= 2.0f){
 			_send_UWB_data_frq = 0.0f;
 			mavlink_log_info(_mavlink_fd, "ros:%3.2f,%3.2f,%3.2f,%3.2f,%3.2f,%3.2f,%3.2f", (double)_ros.x,
@@ -557,7 +558,12 @@ MulticopterPositionControl::poll_subscriptions()
 					(double)_ros.target_x , (double)_ros.target_y,(double)_ros.target_z,(double)_ros.target_yaw,(double)_ros.flight_mode);
 			*/
 		}
-
+		//if(_ros.flight_mode == 1){
+				_num_UWB  = _num_UWB +1 ;
+		//}
+		//else
+		//	mavlink_log_info(_mavlink_fd, "ros: data loss");
+		
 		_UWBdata_loss_time = 0.0 ;
 
 	}
@@ -565,11 +571,18 @@ MulticopterPositionControl::poll_subscriptions()
 		hrt_abstime tt1 = hrt_absolute_time();
 		float ddt1 = (tt1 - t_prev_UWB)/1000.0;
 		//t_prev_UWB = tt1;
-		if(ddt1 > 500){
+		/*if(ddt1 > 500){
 			mavlink_log_info(_mavlink_fd, "UWB loss time:%3.2f",(double)ddt1);
-		}
-		if(ddt1>10000)
+			t_prev_UWB = tt1;
 			_UWB_initialed = false;
+		}*/
+		if(ddt1>5000){
+			mavlink_log_info(_mavlink_fd, "UWB No.:%d,ros.x %3.2f,ros.target_z %3.2f",_num_UWB, (double)_ros.x, (double)_ros.target_z);
+			_UWB_initialed = false;
+			_num_UWB =0 ;
+		}
+		//if(ddt1>10000)
+		//	_UWB_initialed = false;
 	}
 	/*else{ // miao: 18-4-2015 , data loss protect
 		if(_control_mode.flag_control_position_enabled && _flag_ros ){
@@ -1123,6 +1136,7 @@ MulticopterPositionControl::task_main()
 	_send_pos_sp_data_frq = 0.0f ;
 	t_prev_UWB = 0 ;
 	_UWB_initialed = false;
+	_num_UWB = 0;
 	if (isfinite(_att.yaw)) 
 		_UWB_init_yaw = _att.yaw ;
 	else
