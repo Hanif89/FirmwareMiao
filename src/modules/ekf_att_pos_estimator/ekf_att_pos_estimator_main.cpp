@@ -812,14 +812,14 @@ void AttitudePositionEstimatorEKF::publishAttitude()
 void AttitudePositionEstimatorEKF::publishLocalPosition()
 {
 	_local_pos.timestamp = _last_sensor_timestamp;
-	_local_pos.x = _ekf->states[7];//posNE[0];//
-	_local_pos.y = _ekf->states[8];//posNE[1];//
+	_local_pos.x = _ekf->states[7];
+	_local_pos.y = _ekf->states[8];
 
 	// XXX need to announce change of Z reference somehow elegantly
 	_local_pos.z = _ekf->states[9] /*- _baro_ref_offset- _baroAltRef*/;
 
-	_local_pos.vx = _ekf->states[4];//velNED[0];//
-	_local_pos.vy = _ekf->states[5];//velNED[1];//
+	_local_pos.vx = _ekf->states[4];
+	_local_pos.vy = _ekf->states[5];
 	_local_pos.vz = _ekf->states[6];
 
 	_local_pos.xy_valid = _gps_initialized && _gpsIsGood;
@@ -1204,8 +1204,8 @@ void AttitudePositionEstimatorEKF::pollData()
 	_ekf->dtIMU = deltaT;
 
 	int last_gyro_main = _gyro_main;
-
-	/*if (isfinite(_sensor_combined.gyro_rad_s[0]) &&
+/*
+	if (isfinite(_sensor_combined.gyro_rad_s[0]) &&
 	    isfinite(_sensor_combined.gyro_rad_s[1]) &&
 	    isfinite(_sensor_combined.gyro_rad_s[2]) &&
 	    (_sensor_combined.gyro_errcount <= _sensor_combined.gyro1_errcount)) {
@@ -1228,8 +1228,8 @@ void AttitudePositionEstimatorEKF::pollData()
 
 	} else {
 		_gyro_valid = false;
-	}*/
-
+	}
+*/
 	if (last_gyro_main != _gyro_main) {
 		mavlink_and_console_log_emergency(_mavlink_fd, "GYRO FAILED! Switched from #%d to %d", last_gyro_main, _gyro_main);
 	}
@@ -1326,7 +1326,6 @@ void AttitudePositionEstimatorEKF::pollData()
 
 		} else {
 			_gpsIsGood = false;
-			mavlink_log_info(_mavlink_fd, "[_gpsIsNoGood %d,%3.2f,%3.2f",_gps.fix_type,(double)_gps.eph,(double)_gps.epv);
 		}
 
 		if (_gpsIsGood) {
@@ -1407,7 +1406,7 @@ void AttitudePositionEstimatorEKF::pollData()
 	}
 
 	//If we have no good GPS fix for half a second, then enable dead-reckoning mode while armed (for up to POS_RESET_THRESHOLD seconds)
-	else if (dtLastGoodGPS >= 0.5f) { //miao: for UWB
+	else if (dtLastGoodGPS >= 0.5f) {
 		if (_armed.armed) {
 			if (!_global_pos.dead_reckoning) {
 				mavlink_log_info(_mavlink_fd, "[ekf] dead-reckoning enabled");

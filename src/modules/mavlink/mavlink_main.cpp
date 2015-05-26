@@ -1381,7 +1381,9 @@ Mavlink::task_main(int argc, char *argv[])
 		configure_stream("VFR_HUD", 8.0f);
 		configure_stream("GPS_RAW_INT", 1.0f);
 		configure_stream("GLOBAL_POSITION_INT", 3.0f);
-		configure_stream("LOCAL_POSITION_NED", 20.0f);//3.0f);//miao:
+		configure_stream("LOCAL_POSITION_NED", 10.0f);//3.0f);//miao:
+		configure_stream("POSITION_TARGET_LOCAL_NED", 10.0f);//miao
+		configure_stream("VICON_POSITION_ESTIMATE", 10.0f);//miao
 		configure_stream("RC_CHANNELS_RAW", 1.0f);
 		configure_stream("POSITION_TARGET_GLOBAL_INT", 3.0f);
 		configure_stream("ATTITUDE_TARGET", 3.0f);
@@ -1398,6 +1400,7 @@ Mavlink::task_main(int argc, char *argv[])
 		configure_stream("ATTITUDE_TARGET", 10.0f);
 		configure_stream("POSITION_TARGET_GLOBAL_INT", 10.0f);
 		configure_stream("POSITION_TARGET_LOCAL_NED", 10.0f);
+		configure_stream("VICON_POSITION_ESTIMATE", 10.0f);//miao
 		configure_stream("DISTANCE_SENSOR", 10.0f);
 		configure_stream("OPTICAL_FLOW_RAD", 10.0f);
 		configure_stream("VFR_HUD", 10.0f);
