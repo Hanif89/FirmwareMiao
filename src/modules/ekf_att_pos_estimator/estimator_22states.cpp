@@ -1231,7 +1231,7 @@ void AttPosEKF::FuseVelposNED()
         {
             fuseData[0] = true;
             fuseData[1] = true;
-            fuseData[2] = true;
+            fuseData[2] = false;//true;
         }
         if (fuseVelData && fusionModeGPS == 1 && current_ekf_state.velHealth)
         {

@@ -219,6 +219,8 @@ private:
 	bool _UWB_initialed;
 	int _num_UWB;
 	float _waypoints[10][3];
+	float _last_waypoint[3];
+	int _no_waypoints;
 	int _ftimes;
 
 	math::Vector<3> _pos;
@@ -707,9 +709,11 @@ MulticopterPositionControl::control_auto_indoor(float dt)
 		_reset_mission = false;
 		_mode_mission = 1 ;
 		_hover_time = 0.0f ;
+		_ftimes = 0 ;
+		_no_waypoints = 0 ;
 	}
 	float height_hover_constant= -1.0f;
-	float hover_time_constant = 10.0f;
+	float hover_time_constant = 4.0f;
 
 	//if(_ros.flight_mode==1)
 	if(_mode_mission == 1)
@@ -718,6 +722,7 @@ MulticopterPositionControl::control_auto_indoor(float dt)
 		{
 			_sp_move_rate(2) = 0.0;
 			_mode_mission = 2;
+			_hover_time = 0.0f;
 		}else
 		{
 			_sp_move_rate(2) = -0.8;			
@@ -740,14 +745,7 @@ MulticopterPositionControl::control_auto_indoor(float dt)
 
 		/* move position setpoint */
 		_pos_sp += _sp_move_rate * dt;
-
-		//for test on time
-		/*_hover_time += dt;
-		if(_hover_time > hover_time_constant)
-		{
-			_hover_time = 0.0f;
-			_mode_mission = 2;
-		}	*/
+		
 	}else if(_mode_mission == 2)	
 	{
 		_pos_sp(0) = 0.0;
@@ -760,24 +758,37 @@ MulticopterPositionControl::control_auto_indoor(float dt)
 		{
 			_hover_time = 0.0f;
 			_mode_mission = 3;//3;// test for position control
+			_last_waypoint[0] = _pos_sp(0);
+			_last_waypoint[1] = _pos_sp(1);
+			_last_waypoint[2] = _pos_sp(2);
 		}	
 	}else if(_mode_mission == 3)	
 	{
-		_pos_sp(0) = 1.5;
-		_pos_sp(1) = 1.5;
-		_pos_sp(2) = -1.0;
-
+		_pos_sp(0) = (_waypoints[_no_waypoints][0]-_last_waypoint[0])*(_hover_time/hover_time_constant)+_last_waypoint[0];
+		_pos_sp(1) = (_waypoints[_no_waypoints][1]-_last_waypoint[1])*(_hover_time/hover_time_constant)+_last_waypoint[1];
+		_pos_sp(2) = (_waypoints[_no_waypoints][2]-_last_waypoint[2])*(_hover_time/hover_time_constant)+_last_waypoint[2];
 		//for test on time
 		_hover_time += dt;		
 		if(_hover_time > hover_time_constant)
 		{
 			_hover_time = 0.0f;
-			_mode_mission = 4;//3;// test for position control
+			_no_waypoints = _no_waypoints+1 ;
+			_last_waypoint[0] = _pos_sp(0);
+			_last_waypoint[1] = _pos_sp(1);
+			_last_waypoint[2] = _pos_sp(2);
+			if(_no_waypoints >= 4)
+			{
+				_ftimes = _ftimes+1;
+				_no_waypoints = 0 ;
+				if(_ftimes>=3){
+					_mode_mission = 4;//3;// test for position control
+				}
+			}			
 		}
 	}else if(_mode_mission == 4)	
 	{
-		_pos_sp(0) = 1.5;
-		_pos_sp(1) = -1.5;
+		_pos_sp(0) = 0.0;
+		_pos_sp(1) = 0.0;
 		_pos_sp(2) = -1.0;
 
 		//for test on time
@@ -785,64 +796,8 @@ MulticopterPositionControl::control_auto_indoor(float dt)
 		if(_hover_time > hover_time_constant)
 		{
 			_hover_time = 0.0f;
-			_mode_mission = 5;//3;// test for position control
-		}
-	}else if(_mode_mission == 5)	
-	{
-		_pos_sp(0) = -1.5;
-		_pos_sp(1) = -1.5;
-		_pos_sp(2) = -1.0;
-
-		//for test on time
-		_hover_time += dt;		
-		if(_hover_time > hover_time_constant)
-		{
-			_hover_time = 0.0f;
-			_mode_mission = 6;//3;// test for position control
-		}
-	}else if(_mode_mission == 6)	
-	{
-		_pos_sp(0) = -1.5;
-		_pos_sp(1) = 1.5;
-		_pos_sp(2) = -1.0;
-
-		//for test on time
-		_hover_time += dt;		
-		if(_hover_time > hover_time_constant)
-		{
-			_hover_time = 0.0f;
-			_mode_mission = 7;//3;// test for position control
-		}
-	}else if(_mode_mission == 7)	
-	{
-		_pos_sp(0) = 1.5;
-		_pos_sp(1) = 1.5;
-		_pos_sp(2) = -1.0;
-
-		//for test on time
-		_hover_time += dt;		
-		if(_hover_time > hover_time_constant)
-		{
-			_hover_time = 0.0f;
-			_mode_mission = 8;//3;// test for position control
-		}
-	}else if(_mode_mission == 8)	
-	{
-		_pos_sp(0) = 0;
-		_pos_sp(1) = 0;
-		_pos_sp(2) = -1.0;
-
-		//for test on time
-		_hover_time += dt;		
-		if(_hover_time > hover_time_constant)
-		{
-			_hover_time = 0.0f;
-			_mode_mission = 9;//3;// test for position control
-		}
-	}else if(_mode_mission == 9)	
-	{
-		;//_pos_sp_triplet.current.type = position_setpoint_s::SETPOINT_TYPE_LAND;
-
+			_mode_mission = 0;//3;// test for position control
+		}		
 	}else {
 		//_pos_sp_triplet.current.type = position_setpoint_s::SETPOINT_TYPE_LAND;
 		_control_mode.flag_control_position_enabled = false ;
@@ -1217,18 +1172,21 @@ MulticopterPositionControl::task_main()
 	_UWB_initialed = false;
 	_num_UWB = 0;
 	_ftimes = 0 ; //flight times for a group of waypoints
-	waypoints[0][0]= 1.5f;
-	waypoints[0][1]= 1.5f;
-	waypoints[0][2]= -1.0f;
-	waypoints[1][0]= 1.5f;
-	waypoints[1][1]= -1.5f;
-	waypoints[1][2]= -1.0f;
-	waypoints[2][0]= -1.5f;
-	waypoints[2][1]= -1.5f;
-	waypoints[2][2]= -1.0f;
-	waypoints[3][0]= 1.5f;
-	waypoints[3][1]= -1.5f;
-	waypoints[3][2]= -1.0f;
+	_no_waypoints = 0 ;
+	float _dis_x = 1.5 ;
+	float _dis_y = 1.5 ;
+	_waypoints[0][0]= (_dis_x*cosf(143.0f/180.0f*PI)+_dis_y*sinf(143.0f/180.0f*PI));
+	_waypoints[0][1]= -_dis_x*sinf(143.0f/180.0f*PI)+_dis_y*cosf(143.0f/180.0f*PI);
+	_waypoints[0][2]= -1.0;
+	_waypoints[1][0]= _dis_x*cosf(143.0f/180.0f*PI)-_dis_y*sinf(143.0f/180.0f*PI);
+	_waypoints[1][1]= -_dis_x*sinf(143.0f/180.0f*PI)-_dis_y*cosf(143.0f/180.0f*PI);
+	_waypoints[1][2]= -1.0;
+	_waypoints[2][0]= -_dis_x*cosf(143.0f/180.0f*PI)-_dis_y*sinf(143.0f/180.0f*PI);
+	_waypoints[2][1]= _dis_x*sinf(143.0f/180.0f*PI)-_dis_y*cosf(143.0f/180.0f*PI);
+	_waypoints[2][2]= -1.0;
+	_waypoints[3][0]= -_dis_x*cosf(143.0f/180.0f*PI)+_dis_y*sinf(143.0f/180.0f*PI);
+	_waypoints[3][1]= _dis_x*sinf(143.0f/180.0f*PI)+_dis_y*cosf(143.0f/180.0f*PI);
+	_waypoints[3][2]= -1.0;
 
 	if (isfinite(_att.yaw)) 
 		_UWB_init_yaw = _att.yaw ;
@@ -1393,7 +1351,7 @@ MulticopterPositionControl::task_main()
 				/* use constant descend rate when landing, ignore altitude setpoint */
 				//if (!_control_mode.flag_control_manual_enabled && _pos_sp_triplet.current.valid && _pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_LAND) {
 				// miao: for auto landing test with manual mode
-				if (_mode_mission == 0 || _mode_mission == 9) {
+				if (_mode_mission == 0 ) {
 					_vel_sp(2) = _params.land_speed;
 				}
 
