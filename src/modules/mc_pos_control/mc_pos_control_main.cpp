@@ -713,7 +713,7 @@ MulticopterPositionControl::control_auto_indoor(float dt)
 		_no_waypoints = 0 ;
 	}
 	float height_hover_constant= -1.0f;
-	float hover_time_constant = 4.0f;
+	float hover_time_constant = 10.0f;
 
 	//if(_ros.flight_mode==1)
 	if(_mode_mission == 1)
@@ -1593,8 +1593,22 @@ MulticopterPositionControl::task_main()
 
 						/* calculate euler angles, for logging only, must not be used for control */
 						math::Vector<3> euler = R.to_euler();
-						_att_sp.roll_body = euler(0);
-						_att_sp.pitch_body = euler(1);
+						//miao 20150605
+						if(euler(0) > 8.0f*PI/180.0f )
+							_att_sp.roll_body = 8.0f*PI/180.0f ;
+						else if(euler(0) < -8.0f*PI/180.0f)
+							_att_sp.roll_body = -8.0f*PI/180.0f ;
+						else 
+							_att_sp.roll_body = euler(0);
+
+						if(euler(1) > 8.0f*PI/180.0f )
+							_att_sp.pitch_body = 8.0f*PI/180.0f ;
+						else if(euler(1) < -8.0f*PI/180.0f)
+							_att_sp.pitch_body = -8.0f*PI/180.0f ;
+						else 
+							_att_sp.pitch_body = euler(1);
+						//_att_sp.roll_body = euler(0);
+						//_att_sp.pitch_body = euler(1);
 						/* yaw already used to construct rot matrix, but actual rotation matrix can have different yaw near singularity */
 
 					} else if (!_control_mode.flag_control_manual_enabled) {

@@ -19,3 +19,6 @@
 [submodule "src/lib/eigen"]
 	path = src/lib/eigen
 	url = https://github.com/PX4/eigen.git
+[submodule "c_library"]
+	path = c_library
+	url = https://github.com/aresmiao/c_library.git

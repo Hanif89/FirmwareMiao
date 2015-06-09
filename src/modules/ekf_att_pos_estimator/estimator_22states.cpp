@@ -2876,9 +2876,9 @@ bool AttPosEKF::VelNEDDiverged()
     current_vel.z = states[6];
 
     Vector3f gps_vel;
-    gps_vel.x = velNED[0];
-    gps_vel.y = velNED[1];
-    gps_vel.z = velNED[2];
+    gps_vel.x = states[4];//velNED[0];//hanif
+    gps_vel.y = states[5];//velNED[1];
+    gps_vel.z = states[6];//velNED[2];
 
     Vector3f delta = current_vel - gps_vel;
     float delta_len = delta.length();
