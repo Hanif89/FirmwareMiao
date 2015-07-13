@@ -800,8 +800,9 @@ MulticopterPositionControl::control_auto_indoor(float dt)
 		}		
 	}else {
 		//_pos_sp_triplet.current.type = position_setpoint_s::SETPOINT_TYPE_LAND;
-		_control_mode.flag_control_position_enabled = false ;
-		_control_mode.flag_control_velocity_enabled = false ;
+		//_control_mode.flag_control_position_enabled = false ;
+		//_control_mode.flag_control_velocity_enabled = false ;
+		_mode_mission = 0;
 	}
 	
 	if (_control_mode.flag_control_altitude_enabled) {
