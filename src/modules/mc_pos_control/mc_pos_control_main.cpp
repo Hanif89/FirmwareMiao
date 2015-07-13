@@ -202,6 +202,11 @@ private:
 	hrt_abstime _ref_timestamp;
 
 	float _hover_time; //miao: hover time for auto take off
+	float _hover_height;
+	float _ROSTarget_x ;
+	float _ROSTarget_y ;
+	float _ROSTarget_z ;
+	float _ROSTarget_yaw ;
 	float _UWBdata_loss_time; // miao when UWB data loss exceed 2seconds , it will land
  	int _mode_mission; //miao:
  	bool _reset_mission;//miao
@@ -272,6 +277,7 @@ private:
 	 * miao 17-4-2015  for indoor auto control
 	 */
 	void		control_auto_indoor(float dt);
+	void		control_auto_indoor_fixwp(float dt);
 
 	/**
 	 * Set position setpoint using manual control
@@ -306,6 +312,14 @@ private:
 	 */
 	void		task_main();
 };
+#define ROS_Standby  1
+#define ROS_Takeoff1  11
+#define ROS_Takeoff2  12
+#define ROS_Path1 21
+#define ROS_Path2 22
+#define ROS_Path3 23
+#define ROS_LandNoP 31
+#define ROS_LandP 32
 
 namespace pos_control
 {
@@ -545,9 +559,58 @@ MulticopterPositionControl::poll_subscriptions()
 	orb_check(_ros_sub, &updated);	
 	if (updated) {
 		orb_copy(ORB_ID(ros_estimate_path), _ros_sub, &_ros);
-		if(_ros.flight_mode == 0){
-				mavlink_log_info(_mavlink_fd, "ros: data loss");
+		switch(_ros.flight_mode){
+			case 0:
+				_mode_mission = ROS_Standby;
+				break;
+			case 11:
+				_mode_mission = ROS_Takeoff1;
+				_hover_height = -1.0f;
+				break;
+			case 12:
+				_mode_mission = ROS_Takeoff2;
+				_hover_height = _ros.target_z;
+				break;
+			case 21:
+				_mode_mission = ROS_Path1;
+				_ROSTarget_x = _ros.target_x ;
+				_ROSTarget_y = _ros.target_y ;
+				_ROSTarget_z = _hover_height ;	
+				_ROSTarget_yaw = _att_sp.yaw_body;		
+				break;
+			case 22:
+				_mode_mission = ROS_Path2;
+				_ROSTarget_x = _ros.target_x ;
+				_ROSTarget_y = _ros.target_y ;
+				_ROSTarget_z = _ros.target_z ;	
+				_ROSTarget_yaw = _att_sp.yaw_body;
+				break;
+			case 23:
+				_mode_mission = ROS_Path3;
+				_ROSTarget_x = _ros.target_x ;
+				_ROSTarget_y = _ros.target_y ;
+				_ROSTarget_z = _ros.target_z ;	
+				_ROSTarget_yaw = _ros.target_yaw ;
+				break;
+			case 31:
+				if(_mode_mission!=0)
+					_mode_mission = ROS_LandNoP;
+				else
+					_mode_mission = 0 ;
+				break;
+			case 32:
+				if(_mode_mission!=0)
+					_mode_mission = ROS_LandP;
+				else
+					_mode_mission = 0 ;
+				break;
+			default:
+				_mode_mission = 0;
+				break;
 		}
+		/*if(_ros.flight_mode == 0){
+				mavlink_log_info(_mavlink_fd, "ros: data loss");
+		}*/
 		hrt_abstime tt = hrt_absolute_time();
 		//float ddt = tt - t_prev_UWB;
 		t_prev_UWB = tt ;
@@ -556,8 +619,8 @@ MulticopterPositionControl::poll_subscriptions()
 		_send_UWB_data_frq += 0.05f ;
 		if(_send_UWB_data_frq >= 2.0f){
 			_send_UWB_data_frq = 0.0f;
-			mavlink_log_info(_mavlink_fd, "ros:%3.2f,%3.2f,%3.2f,%3.2f,%3.2f,%3.2f,%3.2f", (double)_ros.x,
-					(double)_ros.y, (double)_ros.z,(double)_ros.yaw,(double)_ros.vx,(double)_ros.vy,(double)_ros.vz);
+			mavlink_log_info(_mavlink_fd, "ros:%3.2f,%3.2f,%3.2f,%3.2f,%3.2f,%3.2f,%3.2f,%3.2f", (double)_ros.x,
+					(double)_ros.y, (double)_ros.z,(double)_ros.yaw,(double)_ros.target_x,(double)_ros.target_y,(double)_ros.target_z,(double)_ros.target_yaw);
 			/*mavlink_log_info(_mavlink_fd, "ros:%3.2f,%3.2f,%3.2f,%3.2f,%3.2f,%3.2f", (double)_ros.x,
 					(double)_ros.target_x , (double)_ros.target_y,(double)_ros.target_z,(double)_ros.target_yaw,(double)_ros.flight_mode);
 			*/
@@ -693,8 +756,118 @@ MulticopterPositionControl::limit_pos_sp_offset()
 		_pos_sp = _pos + pos_sp_offs.emult(_params.sp_offs_max);
 	}
 }
+
+
 void
 MulticopterPositionControl::control_auto_indoor(float dt)
+{
+	_sp_move_rate.zero();
+
+	if(_reset_mission){
+		_reset_mission = false;
+		_mode_mission = 1 ;
+		_hover_time = 0.0f ;
+		_hover_height = -1.0f;
+		_ROSTarget_x = 0.0;
+		_ROSTarget_y = 0.0;
+		_ROSTarget_z = _hover_height;
+		_ROSTarget_yaw = 0.0 ;
+		_ftimes = 0 ;
+		_no_waypoints = 0 ;
+	}
+	
+	switch(_mode_mission){
+		case ROS_Standby:
+			break;
+		case ROS_Takeoff1:
+		case ROS_Takeoff2:
+			{
+				if(_pos_sp(2) <= _hover_height)
+				{
+					_sp_move_rate(2) = 0.0;			
+				}else
+				{
+					_sp_move_rate(2) = -0.8;			
+				}
+				_sp_move_rate(0) = 0.0;
+				_sp_move_rate(1) = 0.0;
+				/* limit setpoint move rate */
+				float sp_move_norm = _sp_move_rate.length();
+
+				if (sp_move_norm > 1.0f) {
+					_sp_move_rate /= sp_move_norm;
+				}
+				/* _sp_move_rate scaled to 0..1, scale it to max speed and rotate around yaw */
+				math::Matrix<3, 3> R_yaw_sp;
+				R_yaw_sp.from_euler(0.0f, 0.0f, _att_sp.yaw_body);
+				_sp_move_rate = R_yaw_sp * _sp_move_rate.emult(_params.vel_max);
+				
+				/* feed forward setpoint move rate with weight vel_ff */
+				_vel_ff = _sp_move_rate.emult(_params.vel_ff);
+
+				/* move position setpoint */
+				_pos_sp += _sp_move_rate * dt;
+				
+			}
+			break;
+		case ROS_Path1:
+		case ROS_Path2:
+		case ROS_Path3:
+			_pos_sp(0) = _ROSTarget_x;
+			_pos_sp(1) = _ROSTarget_y;
+			_pos_sp(2) = _ROSTarget_z;
+			_att_sp.yaw_body = _ROSTarget_yaw ;
+			break;
+		case ROS_LandNoP:
+			_control_mode.flag_control_position_enabled = false ;
+			_control_mode.flag_control_velocity_enabled = false ;
+			_mode_mission = 0 ;
+			break;
+		case ROS_LandP:
+			_mode_mission = 0 ;
+			break;
+		default:			
+			_mode_mission = 0 ;
+			break;
+	}
+	_send_pos_sp_data_frq += dt;
+	if(_send_pos_sp_data_frq >= 3.0f){
+		_send_pos_sp_data_frq = 0.0f;
+		mavlink_log_info(_mavlink_fd, "Tgt:x%3.2f,y%3.2f,yaw%3.2f,z%3.2f,m%d",
+				(double)_pos_sp(0), (double)_pos_sp(1),(double)(_att_sp.yaw_body*180/PI) ,(double)_pos_sp(2),_mode_mission);
+	}	
+	if (_control_mode.flag_control_altitude_enabled) {
+		/* reset alt setpoint to current altitude if needed */
+		reset_alt_sp();
+	}
+
+	if (_control_mode.flag_control_position_enabled) {
+		/* reset position setpoint to current position if needed */
+		reset_pos_sp();
+	}
+
+	/* check if position setpoint is too far from actual position */
+	math::Vector<3> pos_sp_offs;
+	pos_sp_offs.zero();
+
+	if (_control_mode.flag_control_position_enabled) {
+		pos_sp_offs(0) = (_pos_sp(0) - _pos(0)) / _params.sp_offs_max(0);
+		pos_sp_offs(1) = (_pos_sp(1) - _pos(1)) / _params.sp_offs_max(1);
+	}
+
+	if (_control_mode.flag_control_altitude_enabled) {
+		pos_sp_offs(2) = (_pos_sp(2) - _pos(2)) / _params.sp_offs_max(2);
+	}
+
+	float pos_sp_offs_norm = pos_sp_offs.length();
+
+	if (pos_sp_offs_norm > 1.0f) {
+		pos_sp_offs /= pos_sp_offs_norm;
+		_pos_sp = _pos + pos_sp_offs.emult(_params.sp_offs_max);
+	}
+}
+void
+MulticopterPositionControl::control_auto_indoor_fixwp(float dt)
 {
 	/*bool updated;
 	orb_check(_ros_sub, &updated);	
@@ -834,7 +1007,6 @@ MulticopterPositionControl::control_auto_indoor(float dt)
 		_pos_sp = _pos + pos_sp_offs.emult(_params.sp_offs_max);
 	}
 }
-
 void
 MulticopterPositionControl::control_manual(float dt)
 {
@@ -1162,6 +1334,11 @@ MulticopterPositionControl::task_main()
 
 	hrt_abstime t_prev = 0;
 	_hover_time = 0.0; // miao:
+	_hover_height = -1.0;
+	_ROSTarget_x = 0.0 ;
+	_ROSTarget_y = 0.0 ;
+	_ROSTarget_z = _hover_height ;
+	_ROSTarget_yaw = 0.0 ;
 	_UWBdata_loss_time = 0.0;
 	_mode_mission = 1;//1; 2 is testint of position control
 	_flag_ros = true ; //default ros mode

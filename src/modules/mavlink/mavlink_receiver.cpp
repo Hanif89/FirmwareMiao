@@ -562,7 +562,7 @@ MavlinkReceiver::handle_message_ros_estimate_path(mavlink_message_t *msg)
 			_ros_no = 0 ;
 		}
 		_ros_no = _ros_no + 1.0f;
-		ros.target_z = _ros_no;
+		//ros.target_z = _ros_no;
 
 		if (_ros_pub < 0) {
 			_ros_pub = orb_advertise(ORB_ID(ros_estimate_path), &ros);
