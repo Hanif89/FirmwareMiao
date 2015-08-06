@@ -1,0 +1,69 @@
+PERFORMANCE COUNTERS PRE-FLIGHT
+
+sd write: 0 events, 0 overruns, 0us elapsed, 0us avg, min 0us max 0us 0.000us rms
+mavlink_txe: 12 events
+mavlink_el: 8600 events, 0 overruns, 449820us elapsed, 52us avg, min 24us max 2701us 98.826us rms
+mavlink_txe: 0 events
+mavlink_el: 43425 events, 0 overruns, 1896409us elapsed, 43us avg, min 24us max 2950us 99.528us rms
+navigator: 6293 events, 0 overruns, 148172us elapsed, 23us avg, min 9us max 21689us 286.355us rms
+mc_att_control: 10650 events, 0 overruns, 624254us elapsed, 58us avg, min 48us max 190us 19.673us rms
+ekf_att_pos_reset: 0 events
+ekf_att_pos_aspd_upd: 0 events, 0us avg, min 0us max 0us 0.000us rms
+ekf_att_pos_baro_upd: 6472 events, 14998us avg, min 7829us max 35670us 6628.337us rms
+ekf_att_pos_gps_upd: 295 events, 314784us avg, min 26931us max 78168468us 4548206.000us rms
+ekf_att_pos_mag_upd: 9158 events, 10598us avg, min 2465us max 35669us 3444.814us rms
+ekf_att_pos_gyro_upd: 21550 events, 4504us avg, min 10us max 26647us 4495.535us rms
+ekf_att_pos_est_interval: 10775 events, 9008us avg, min 2473us max 26659us 184.279us rms
+ekf_att_pos_estimator: 10664 events, 0 overruns, 21333081us elapsed, 2000us avg, min 477us max 3453us 361.720us rms
+sensor task update: 24265 events, 0 overruns, 1656810us elapsed, 68us avg, min 44us max 355us 26.163us rms
+ll40ls_zero_resets: 0 events
+ll40ls_resets: 0 events
+ll40ls_buffer_overflows: 1885 events
+ll40ls_comms_errors: 0 events
+ll40ls_read: 1887 events, 0 overruns, 1205207us elapsed, 638us avg, min 508us max 2968us 425.614us rms
+px4flow_buffer_overflows: 0 events
+px4flow_comms_errors: 0 events
+px4flow_read: 0 events, 0 overruns, 0us elapsed, 0us avg, min 0us max 0us 0.000us rms
+px4flow_buffer_overflows: 0 events
+px4flow_comms_errors: 0 events
+px4flow_read: 0 events, 0 overruns, 0us elapsed, 0us avg, min 0us max 0us 0.000us rms
+lsm303d_bad_values: 0 events
+lsm303d_bad_registers: 0 events
+lsm303d_accel_resched: 6228 events
+lsm303d_mag_read: 9732 events, 0 overruns, 204917us elapsed, 21us avg, min 21us max 22us 0.230us rms
+lsm303d_accel_read: 83533 events, 0 overruns, 2372802us elapsed, 28us avg, min 8us max 31us 5.517us rms
+l3gd20_bad_registers: 0 events
+l3gd20_errors: 0 events
+l3gd20_reschedules: 12071 events
+l3gd20_read: 85065 events, 0 overruns, 2412525us elapsed, 28us avg, min 8us max 36us 7.891us rms
+mpu6000_reset_retries: 0 events
+mpu6000_good_transfers: 97329 events
+mpu6000_bad_registers: 0 events
+mpu6000_bad_transfers: 0 events
+mpu6000_read: 97333 events, 0 overruns, 4796068us elapsed, 49us avg, min 47us max 58us 0.470us rms
+mpu6000_gyro_read: 0 events
+mpu6000_accel_read: 2 events
+ctrl_latency: 10656 events, 9 overruns, 5167047us elapsed, 484us avg, min 12us max 996us 270.536us rms
+sys_latency: 0 events, 0 overruns, 0us elapsed, 0us avg, min 0us max 0us 0.000us rms
+mpu6000_reset_retries: 0 events
+adc_samples: 97300 events, 0 overruns, 253344us elapsed, 2us avg, min 2us max 3us 0.489us rms
+ms5611_buffer_overflows: 6487 events
+ms5611_comms_errors: 0 events
+ms5611_measure: 8655 events, 0 overruns, 94289us elapsed, 10us avg, min 6us max 2495us 64.907us rms
+ms5611_read: 8654 events, 0 overruns, 804917us elapsed, 93us avg, min 10us max 2782us 152.413us rms
+mavlink_txe: 0 events
+mavlink_el: 7954 events, 0 overruns, 8168376us elapsed, 1026us avg, min 22us max 7584521us 85050.156us rms
+io latency: 10667 events, 0 overruns, 46234520us elapsed, 4334us avg, min 1596us max 7402us 1227.872us rms
+io write: 0 events, 0 overruns, 0us elapsed, 0us avg, min 0us max 0us 0.000us rms
+io update: 10726 events, 0 overruns, 10427444us elapsed, 972us avg, min 261us max 2802us 864.504us rms
+io_badidle  : 0 events
+io_idle     : 28809 events
+io_uarterrs : 0 events
+io_protoerrs: 0 events
+io_dmaerrs  : 0 events
+io_crcerrs  : 0 events
+io_timeouts : 0 events
+io_retries  : 0 events
+io_dmasetup : 28809 events, 0 overruns, 164354us elapsed, 5us avg, min 3us max 197us 7.496us rms
+io_txns     : 28809 events, 0 overruns, 9916044us elapsed, 344us avg, min 134us max 3266us 116.052us rms
+DMA allocations: 10 events

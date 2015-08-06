@@ -120,6 +120,10 @@ AttPosEKF::AttPosEKF() :
     baroHgtOffset(0.0f),
     rngMea(0.0f),
     rngVel(0.0f),
+    MMSE_x(0.0f),
+    MMSE_y(0.0f),
+    MMSE_vx(0.0f),
+    MMSE_vy(0.0f),
     grdHug_factor(1.0f),
     //InitializeDynamic_count(0),
     innovMag{},
@@ -1121,11 +1125,15 @@ void AttPosEKF::FuseVelposNED()
         // Estimate the GPS Velocity, GPS horiz position and height measurement variances.
         velErr = 0.2f*accNavMag; // additional error in GPS velocities caused by manoeuvring
         posErr = 0.2f*accNavMag; // additional error in GPS position caused by manoeuvring
-        R_OBS[0] = gpsVarianceScaler * sq(vneSigma) + sq(velErr);
-        R_OBS[1] = R_OBS[0];
+        //R_OBS[0] = gpsVarianceScaler * sq(vneSigma) + sq(velErr);
+        R_OBS[0] = gpsVarianceScaler * MMSE_vx + sq(velErr); //qiu
+        //R_OBS[1] = R_OBS[0];
+        R_OBS[1] = gpsVarianceScaler * MMSE_vy + sq(velErr); //qiu
         R_OBS[2] = gpsVarianceScaler * sq(vdSigma) + sq(velErr);
-        R_OBS[3] = gpsVarianceScaler * sq(posNeSigma) + sq(posErr);
-        R_OBS[4] = R_OBS[3];
+        //R_OBS[3] = gpsVarianceScaler * sq(posNeSigma) + sq(posErr);
+        R_OBS[3] = gpsVarianceScaler * MMSE_x + sq(velErr); //qiu
+        //R_OBS[4] = R_OBS[3];
+        R_OBS[4] = gpsVarianceScaler * MMSE_y + sq(velErr); //qiu
         R_OBS[5] = hgtVarianceScaler * sq(posDSigma) + sq(posErr);
         if(fuseRngData) {
             R_OBS[2] = hgtVarianceScaler * sq(vdSigma) + sq(velErr);

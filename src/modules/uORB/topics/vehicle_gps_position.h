@@ -78,6 +78,11 @@ struct vehicle_gps_position_s {
 	float cog_rad;					/**< Course over ground (NOT heading, but direction of movement) in rad, -PI..PI */
 	bool vel_ned_valid;				/**< Flag to indicate if NED speed is valid */
 
+	float MMSE_x; ///<  mmse of x estimate: qiu
+ 	float MMSE_y; ///<  mmse of y estimate: qiu
+ 	float MMSE_vx; ///<  mmse of vx estimate: qiu
+ 	float MMSE_vy; ///<  mmse of vx estimate: qiu
+ 	
 	uint64_t timestamp_time;			/**< Timestamp for time information */
 	uint64_t time_utc_usec;				/**< Timestamp (microseconds, UTC), this is the timestamp which comes from the gps module. It might be unavailable right after cold start, indicated by a value of 0 */
 

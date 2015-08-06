@@ -1346,6 +1346,11 @@ void AttitudePositionEstimatorEKF::pollData()
 			_ekf->velNED[1] = _gps.vel_e_m_s;
 			_ekf->velNED[2] = _gps.vel_d_m_s;
 
+			_ekf->MMSE_x = _gps.MMSE_x ; //qiu
+			_ekf->MMSE_y = _gps.MMSE_y ; //qiu
+			_ekf->MMSE_vx = _gps.MMSE_vx ; //qiu
+			_ekf->MMSE_vy = _gps.MMSE_vy ; //qiu
+
 			_ekf->gpsLat = math::radians(_gps.lat / (double)1e7);
 			_ekf->gpsLon = math::radians(_gps.lon / (double)1e7) - M_PI;
 			_ekf->gpsHgt = _gps.alt / 1e3f;

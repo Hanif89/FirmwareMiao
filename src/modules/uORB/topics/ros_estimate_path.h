@@ -75,6 +75,11 @@ struct ros_estimate_path_s {
 
 	// XXX Add covariances here
 
+	float MMSE_x; ///<  mmse of x estimate: qiu
+ 	float MMSE_y; ///<  mmse of y estimate: qiu
+ 	float MMSE_vx; ///<  mmse of vx estimate: qiu
+ 	float MMSE_vy; ///<  mmse of vx estimate: qiu
+
 };
 
 /**

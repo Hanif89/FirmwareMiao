@@ -552,6 +552,12 @@ MavlinkReceiver::handle_message_ros_estimate_path(mavlink_message_t *msg)
 	ros.target_z = pos.target_z;
 	ros.target_yaw = pos.target_yaw;
 	ros.flight_mode = pos.flight_mode;
+
+	ros.MMSE_x = pos.MMSE_x ; //qiu
+	ros.MMSE_y = pos.MMSE_y ; //qiu
+	ros.MMSE_vx = pos.MMSE_vx ; //qiu
+	ros.MMSE_vy = pos.MMSE_vy ; //qiu
+
 	if((ros.flight_mode>=0))// && (_old_timestamp!=pos.usec))
 	//if((uint64_t)pos.flight_mode!=_old_timestamp)
 	{
@@ -594,6 +600,11 @@ MavlinkReceiver::handle_message_ros_estimate_path(mavlink_message_t *msg)
 		hil_gps.vel_d_m_s = ros.vz ; 
 		hil_gps.vel_ned_valid = true;
 		hil_gps.cog_rad = ros.yaw;//_wrap_pi(ros.yaw);
+
+		hil_gps.MMSE_x = ros.MMSE_x ; //qiu
+		hil_gps.MMSE_y = ros.MMSE_y ; //qiu
+		hil_gps.MMSE_vx = ros.MMSE_vx ; //qiu
+		hil_gps.MMSE_vy = ros.MMSE_vy ; //qiu
 
 		hil_gps.fix_type = 3;
 		hil_gps.satellites_used = 8;  //TODO: rename mavlink_hil_gps_t sats visible to used?

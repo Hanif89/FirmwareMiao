@@ -169,6 +169,11 @@ public:
     float rngMea; // Ground distance
     float rngVel; // Hanif:range vel var
 
+    float MMSE_x; ///<  mmse of x estimate: qiu
+    float MMSE_y; ///<  mmse of y estimate: qiu
+    float MMSE_vx; ///<  mmse of vx estimate: qiu
+    float MMSE_vy; ///<  mmse of vx estimate: qiu
+
     float grdHug_factor; //Hanif
     //uint8_t InitializeDynamic_count;
 
