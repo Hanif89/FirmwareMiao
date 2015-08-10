@@ -126,6 +126,7 @@ public:
     // Times
     uint64_t lastVelPosFusion;  // the time of the last velocity fusion, in the standard time unit of the filter
 
+    float statesAtUWBTime[EKF_STATE_ESTIMATES]; // qiu: States at the effective measurement time for UWB measurement
     float statesAtVelTime[EKF_STATE_ESTIMATES]; // States at the effective measurement time for posNE and velNED measurements
     float statesAtPosTime[EKF_STATE_ESTIMATES]; // States at the effective measurement time for posNE and velNED measurements
     float statesAtHgtTime[EKF_STATE_ESTIMATES]; // States at the effective measurement time for the hgtMea measurement
@@ -257,6 +258,14 @@ public:
     float rngInnovGate;                     // number of standard deviations used for the innovation consistency check
     float minFlowRng;                       // minimum range over which to fuse optical flow measurements
     float moCompR_LOS;                      // scaler from sensor gyro rate to uncertainty in LOS rate
+
+    float anchor_x; //qiu
+    float anchor_y; //qiu
+    float anchor_z; //qiu
+    float UWB_range; //qiu
+    float UWB_NOISE; //qiu
+    //bool fuseUWBDATA; //qiu
+    void FuseUWB(); //qiu
 
     void updateDtGpsFilt(float dt);
 

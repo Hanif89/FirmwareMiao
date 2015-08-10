@@ -937,20 +937,25 @@ void AttitudePositionEstimatorEKF::updateSensorFusion(const bool fuseGPS, const 
 		_covariancePredictionDt = 0.0f;
 	}
 
-	// Fuse GPS Measurements
+	// Fuse GPS Measurements //qiu: fuse UWB 
 	if (fuseGPS && _gps_initialized) {
 		// Convert GPS measurements to Pos NE, hgt and Vel NED
 
 		// set fusion flags
-		_ekf->fuseVelData = false;//true;
-		_ekf->fusePosData = true;
+		//_ekf->fuseVelData = false;//true;
+		//_ekf->fusePosData = true;
 
 		// recall states stored at time of measurement after adjusting for delays
-		_ekf->RecallStates(_ekf->statesAtVelTime, (IMUmsec - _parameters.vel_delay_ms));
-		_ekf->RecallStates(_ekf->statesAtPosTime, (IMUmsec - _parameters.pos_delay_ms));
+		//_ekf->RecallStates(_ekf->statesAtVelTime, (IMUmsec - _parameters.vel_delay_ms));
+		//_ekf->RecallStates(_ekf->statesAtPosTime, (IMUmsec - _parameters.pos_delay_ms));
 
 		// run the fusion step
-		_ekf->FuseVelposNED();
+		//_ekf->FuseVelposNED();
+
+		_ekf->RecallStates(_ekf->statesAtUWBTime, (IMUmsec - _parameters.vel_delay_ms)); //qiu: vel_delay_ms is actually the UWB_delay_ms
+		_ekf->fuseVelData = false; //qiu
+		_ekf->fusePosData = false; //qiu
+		_ekf->FuseUWB();
 
 	} else if (!_gps_initialized) {
 
@@ -1349,6 +1354,11 @@ void AttitudePositionEstimatorEKF::pollData()
 			_ekf->gpsLat = math::radians(_gps.lat / (double)1e7);
 			_ekf->gpsLon = math::radians(_gps.lon / (double)1e7) - M_PI;
 			_ekf->gpsHgt = _gps.alt / 1e3f;
+
+			_ekf->anchor_x = _gps.anchor_x; //qiu
+			_ekf->anchor_y = _gps.anchor_y; //qiu
+			_ekf->anchor_z = _gps.anchor_z; //qiu
+			_ekf->UWB_range = _gps.UWB_range; //qiu
 
 			if (_previousGPSTimestamp != 0) {
 				//Calculate average time between GPS updates

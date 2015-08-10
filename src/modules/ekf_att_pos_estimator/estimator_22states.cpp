@@ -192,6 +192,13 @@ AttPosEKF::AttPosEKF() :
     minFlowRng(0.0f),
     moCompR_LOS(0.0f),
 
+    anchor_x(0.0f), //qiu
+    anchor_y(0.0f), //qiu
+    anchor_z(0.0f), //qiu
+    UWB_range(0.0f), //qiu
+    UWB_NOISE(0.1f), //qiu
+    //fuseUWBDATA(0), //qiu
+
     _isFixedWing(false),
     _onGround(true),
     _accNavMagHorizontal(0.0f)
@@ -1332,6 +1339,93 @@ void AttPosEKF::FuseVelposNED()
     ForceSymmetry();
     ConstrainVariances();
 
+}
+
+void AttPosEKF::fuseUWB()
+{
+    uint64_t tNow = getMicros();
+    updateDtVelPosFilt((tNow - lastVelPosFusion) / 1e6f);
+    lastVelPosFusion = tNow;
+
+    float pos_pre[3]; // predicted position
+    float dis_pre; // predicted distance
+    float disInnov; // distance innovation
+
+    for (uint8_t i = 0; i< 3; i++)
+    {
+        pos_pre[i] = statesAtUWBTime[i+7];
+    }
+    dis_pre = sqrtf((pos_pre[0]-anchor_x)*(pos_pre[0]-anchor_x)+(pos_pre[1]-anchor_y)*(pos_pre[1]-anchor_y)+(pos_pre[2]-anchor_z)*(pos_pre[2]-anchor_z));
+    disInnov = UWB_range - dis_pre;
+
+    current_ekf_state.posHealth = true;
+    current_ekf_state.velHealth = true;
+
+    // update of Kalman Gain
+    float H[EKF_STATE_ESTIMATES] = {0};
+    H[7] = (pos_pre[0]-anchor_x)/dis_pre;
+    H[8] = (pos_pre[1]-anchor_y)/dis_pre;
+    H[9] = (pos_pre[2]-anchor_z)/dis_pre;
+    float S = UWB_NOISE; // S = HPH' + R is the variance of the innovation;
+    for (uint8_t i = 7; i < 7+3; i++)
+    {
+        for (uint8_t j = 7; j < 7+3; i++)
+        {
+            S = S + H[i]*P[i][j]*H[j];
+        }
+    }
+        
+    for (uint8_t i = 0; i < EKF_STATE_ESTIMATES; i++)
+    {
+        Kfusion [i] = 0.0;
+        for (uint8_t j = 7; j < 7+3; j++)
+        {
+            Kfusion[i] = Kfusion[i] + P[i][j]*H[j];
+        }
+        Kfusion[i] = Kfusion[i]/S;
+    }
+    // Don't update Z accel bias state
+    Kfusion[13] = 0;
+    // Don't update wind states if inhibited
+    if (inhibitWindStates) {
+        Kfusion[14] = 0;
+        fusion[15] = 0;
+    }
+    // Don't update magnetic field states if inhibited
+    if (inhibitMagStates) 
+    {
+        for (uint8_t i = 16; i < EKF_STATE_ESTIMATES; i++)
+        {
+            Kfusion[i] = 0;
+        }
+    }
+
+    // update of states    
+    for (uint8_t i = 0; i < EKF_STATE_ESTIMATES; i++)
+    {
+        states[i] = states[i] + Kfusion[i] * disInnov;
+    }
+    float quatMag = sqrtf(states[0]*states[0] + states[1]*states[1] + states[2]*states[2] + states[3]*states[3]);
+    if (quatMag > 1e-12f) // divide by  0 protection
+    {
+        for (uint8_t i = 0; i<=3; i++)
+        {
+            states[i] = states[i] / quatMag;
+        }
+    }
+
+    // update of covariance matrix
+    for (uint8_t i = 0; i < EKF_STATE_ESTIMATES; i++)
+    {
+        for (uint8_t j = 0; j < EKF_STATE_ESTIMATES; j++)
+        {
+            KHP[i][j] = Kfusion[i]*(H[7]*P[7][j]+H[8]*P[8][j]+H[9]*P[9][j]);
+            P[i][j] = P[i][j] - KHP[i][j];
+        }
+    }
+
+    ForceSymmetry();
+    ConstrainVariances();
 }
 
 void AttPosEKF::FuseMagnetometer()
