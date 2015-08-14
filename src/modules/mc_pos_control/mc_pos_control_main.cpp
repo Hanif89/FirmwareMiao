@@ -222,6 +222,7 @@ private:
 	float _last_waypoint[3];
 	int _no_waypoints;
 	int _ftimes;
+	int No_WP;
 
 	math::Vector<3> _pos;
 	math::Vector<3> _pos_sp;
@@ -757,6 +758,7 @@ MulticopterPositionControl::control_auto_indoor(float dt)
 		if(_hover_time > hover_time_constant)
 		{
 			_hover_time = 0.0f;
+			_no_waypoints = 0 ;
 			_mode_mission = 3;//3;// test for position control
 			_last_waypoint[0] = _pos_sp(0);
 			_last_waypoint[1] = _pos_sp(1);
@@ -776,13 +778,13 @@ MulticopterPositionControl::control_auto_indoor(float dt)
 			_last_waypoint[0] = _pos_sp(0);
 			_last_waypoint[1] = _pos_sp(1);
 			_last_waypoint[2] = _pos_sp(2);
-			if(_no_waypoints >= 4)
+			if(_no_waypoints >= No_WP)
 			{
-				_ftimes = _ftimes+1;
+				//_ftimes = _ftimes+1;
 				_no_waypoints = 0 ;
-				if(_ftimes>=3){
+				//if(_ftimes>=3){
 					_mode_mission = 4;//3;// test for position control
-				}
+				//}
 			}			
 		}
 	}else if(_mode_mission == 4)	
@@ -1174,7 +1176,7 @@ MulticopterPositionControl::task_main()
 	_num_UWB = 0;
 	_ftimes = 0 ; //flight times for a group of waypoints
 	_no_waypoints = 0 ;
-	float _dis_x = 1.5 ;
+	/*float _dis_x = 1.5 ;
 	float _dis_y = 1.5 ;
 	_waypoints[0][0]= (_dis_x*cosf(143.0f/180.0f*PI)+_dis_y*sinf(143.0f/180.0f*PI));
 	_waypoints[0][1]= -_dis_x*sinf(143.0f/180.0f*PI)+_dis_y*cosf(143.0f/180.0f*PI);
@@ -1187,7 +1189,65 @@ MulticopterPositionControl::task_main()
 	_waypoints[2][2]= -1.0;
 	_waypoints[3][0]= -_dis_x*cosf(143.0f/180.0f*PI)+_dis_y*sinf(143.0f/180.0f*PI);
 	_waypoints[3][1]= _dis_x*sinf(143.0f/180.0f*PI)+_dis_y*cosf(143.0f/180.0f*PI);
-	_waypoints[3][2]= -1.0;
+	_waypoints[3][2]= -1.0;*/
+
+	float angleT = -143.0f/180.0f*PI;
+	int NO_UAV = 3;
+	//w0(-1,1),w1(1,1),w2(1,-3),w3(-1,-3),w4(-1,1)
+	if(NO_UAV==1){
+		No_WP = 6;
+		float l_wp[10][3]={{-1,1,-1},{1,1,-1},{1,-3,-1},{-1,-3,-1},{-1,1,-1},{0,0,-1},{0,0,-1},{0,0,-1},{0,0,-1},{0,0,-1}};
+		_waypoints[0][0]= l_wp[0][0]*cosf(angleT)+l_wp[0][1]*sinf(angleT);
+		_waypoints[0][1]= -l_wp[0][0]*sinf(angleT)+l_wp[0][1]*cosf(angleT);
+		_waypoints[0][2]= l_wp[0][2];
+		_waypoints[1][0]= l_wp[1][0]*cosf(angleT)+l_wp[1][1]*sinf(angleT);
+		_waypoints[1][1]= -l_wp[1][0]*sinf(angleT)+l_wp[1][1]*cosf(angleT);
+		_waypoints[1][2]= l_wp[1][2];
+		_waypoints[2][0]= l_wp[2][0]*cosf(angleT)+l_wp[2][1]*sinf(angleT);
+		_waypoints[2][1]= -l_wp[2][0]*sinf(angleT)+l_wp[2][1]*cosf(angleT);
+		_waypoints[2][2]= l_wp[2][2];
+		_waypoints[3][0]= l_wp[3][0]*cosf(angleT)+l_wp[3][1]*sinf(angleT);
+		_waypoints[3][1]= -l_wp[3][0]*sinf(angleT)+l_wp[3][1]*cosf(angleT);
+		_waypoints[3][2]= l_wp[3][2];
+		_waypoints[4][0]= l_wp[4][0]*cosf(angleT)+l_wp[4][1]*sinf(angleT);
+		_waypoints[4][1]= -l_wp[4][0]*sinf(angleT)+l_wp[4][1]*cosf(angleT);
+		_waypoints[4][2]= l_wp[4][2];
+		_waypoints[5][0]= l_wp[5][0]*cosf(angleT)+l_wp[5][1]*sinf(angleT);
+		_waypoints[5][1]= -l_wp[5][0]*sinf(angleT)+l_wp[5][1]*cosf(angleT);
+		_waypoints[5][2]= l_wp[5][2];
+		_waypoints[6][0]= l_wp[6][0]*cosf(angleT)+l_wp[6][1]*sinf(angleT);
+		_waypoints[6][1]= -l_wp[6][0]*sinf(angleT)+l_wp[6][1]*cosf(angleT);
+		_waypoints[6][2]= l_wp[6][2];
+	}else{
+
+		No_WP = 7;
+		float l_wp[10][3]={{-1,1,-1},{-1,3,-1},{1,3,-1},{1,-1,-1},{-1,-1,-1},{-1,1,-1},{0,0,-1},{0,0,-1},{0,0,-1},{0,0,-1}};
+		_waypoints[0][0]= l_wp[0][0]*cosf(angleT)+l_wp[0][1]*sinf(angleT);
+		_waypoints[0][1]= -l_wp[0][0]*sinf(angleT)+l_wp[0][1]*cosf(angleT);
+		_waypoints[0][2]= l_wp[0][2];
+		_waypoints[1][0]= l_wp[1][0]*cosf(angleT)+l_wp[1][1]*sinf(angleT);
+		_waypoints[1][1]= -l_wp[1][0]*sinf(angleT)+l_wp[1][1]*cosf(angleT);
+		_waypoints[1][2]= l_wp[1][2];
+		_waypoints[2][0]= l_wp[2][0]*cosf(angleT)+l_wp[2][1]*sinf(angleT);
+		_waypoints[2][1]= -l_wp[2][0]*sinf(angleT)+l_wp[2][1]*cosf(angleT);
+		_waypoints[2][2]= l_wp[2][2];
+		_waypoints[3][0]= l_wp[3][0]*cosf(angleT)+l_wp[3][1]*sinf(angleT);
+		_waypoints[3][1]= -l_wp[3][0]*sinf(angleT)+l_wp[3][1]*cosf(angleT);
+		_waypoints[3][2]= l_wp[3][2];
+		_waypoints[4][0]= l_wp[4][0]*cosf(angleT)+l_wp[4][1]*sinf(angleT);
+		_waypoints[4][1]= -l_wp[4][0]*sinf(angleT)+l_wp[4][1]*cosf(angleT);
+		_waypoints[4][2]= l_wp[4][2];
+		_waypoints[5][0]= l_wp[5][0]*cosf(angleT)+l_wp[5][1]*sinf(angleT);
+		_waypoints[5][1]= -l_wp[5][0]*sinf(angleT)+l_wp[5][1]*cosf(angleT);
+		_waypoints[5][2]= l_wp[5][2];
+		_waypoints[6][0]= l_wp[6][0]*cosf(angleT)+l_wp[6][1]*sinf(angleT);
+		_waypoints[6][1]= -l_wp[6][0]*sinf(angleT)+l_wp[6][1]*cosf(angleT);
+		_waypoints[6][2]= l_wp[6][2];
+		_waypoints[7][0]= l_wp[7][0]*cosf(angleT)+l_wp[7][1]*sinf(angleT);
+		_waypoints[7][1]= -l_wp[7][0]*sinf(angleT)+l_wp[7][1]*cosf(angleT);
+		_waypoints[7][2]= l_wp[7][2];
+	}
+
 
 	if (isfinite(_att.yaw)) 
 		_UWB_init_yaw = _att.yaw ;

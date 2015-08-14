@@ -1,0 +1,69 @@
+PERFORMANCE COUNTERS POST-FLIGHT
+
+sd write: 25898 events, 0 overruns, 128886653us elapsed, 4976us avg, min 9us max 437199us 12894.678us rms
+mavlink_txe: 0 events
+mavlink_el: 17424 events, 0 overruns, 1161761us elapsed, 66us avg, min 24us max 3575us 223.691us rms
+mavlink_txe: 0 events
+mavlink_el: 86539 events, 0 overruns, 4512829us elapsed, 52us avg, min 24us max 3697us 190.064us rms
+navigator: 24086 events, 0 overruns, 3317063us elapsed, 137us avg, min 9us max 31063us 397.444us rms
+mc_att_control: 21899 events, 0 overruns, 1333918us elapsed, 60us avg, min 47us max 240us 24.962us rms
+ekf_att_pos_reset: 0 events
+ekf_att_pos_aspd_upd: 0 events, 0us avg, min 0us max 0us 0.000us rms
+ekf_att_pos_baro_upd: 13074 events, 15089us avg, min 8656us max 27363us 6879.377us rms
+ekf_att_pos_gps_upd: 3938 events, 50076us avg, min 18006us max 108066us 10033.446us rms
+ekf_att_pos_mag_upd: 18647 events, 10579us avg, min 8632us max 18334us 3419.154us rms
+ekf_att_pos_gyro_upd: 43800 events, 4504us avg, min 10us max 9240us 4493.119us rms
+ekf_att_pos_est_interval: 21900 events, 9008us avg, min 8756us max 9256us 30.116us rms
+ekf_att_pos_estimator: 21900 events, 0 overruns, 49976547us elapsed, 2282us avg, min 823us max 3393us 507.502us rms
+sensor task update: 49227 events, 0 overruns, 3393908us elapsed, 68us avg, min 44us max 304us 32.372us rms
+ll40ls_zero_resets: 0 events
+ll40ls_resets: 0 events
+ll40ls_buffer_overflows: 3795 events
+ll40ls_comms_errors: 0 events
+ll40ls_read: 3795 events, 0 overruns, 2905812us elapsed, 765us avg, min 510us max 3564us 725.626us rms
+px4flow_buffer_overflows: 0 events
+px4flow_comms_errors: 0 events
+px4flow_read: 0 events, 0 overruns, 0us elapsed, 0us avg, min 0us max 0us 0.000us rms
+px4flow_buffer_overflows: 0 events
+px4flow_comms_errors: 0 events
+px4flow_read: 0 events, 0 overruns, 0us elapsed, 0us avg, min 0us max 0us 0.000us rms
+lsm303d_bad_values: 0 events
+lsm303d_bad_registers: 0 events
+lsm303d_accel_resched: 12846 events
+lsm303d_mag_read: 19751 events, 0 overruns, 415791us elapsed, 21us avg, min 21us max 22us 0.274us rms
+lsm303d_accel_read: 169721 events, 0 overruns, 4815910us elapsed, 28us avg, min 8us max 31us 6.776us rms
+l3gd20_bad_registers: 0 events
+l3gd20_errors: 0 events
+l3gd20_reschedules: 24546 events
+l3gd20_read: 172681 events, 0 overruns, 4894587us elapsed, 28us avg, min 8us max 32us 9.650us rms
+mpu6000_reset_retries: 0 events
+mpu6000_good_transfers: 197524 events
+mpu6000_bad_registers: 0 events
+mpu6000_bad_transfers: 0 events
+mpu6000_read: 197526 events, 0 overruns, 9736332us elapsed, 49us avg, min 48us max 51us 0.582us rms
+mpu6000_gyro_read: 0 events
+mpu6000_accel_read: 0 events
+ctrl_latency: 21913 events, 22 overruns, 10566754us elapsed, 482us avg, min 12us max 994us 331.148us rms
+sys_latency: 0 events, 0 overruns, 0us elapsed, 0us avg, min 0us max 0us 0.000us rms
+mpu6000_reset_retries: 0 events
+adc_samples: 197540 events, 0 overruns, 512247us elapsed, 2us avg, min 2us max 3us 0.599us rms
+ms5611_buffer_overflows: 13090 events
+ms5611_comms_errors: 0 events
+ms5611_measure: 17453 events, 0 overruns, 171858us elapsed, 9us avg, min 6us max 2890us 78.115us rms
+ms5611_read: 17453 events, 0 overruns, 1709310us elapsed, 97us avg, min 10us max 3297us 237.588us rms
+mavlink_txe: 0 events
+mavlink_el: 16838 events, 0 overruns, 7947224us elapsed, 471us avg, min 22us max 362598us 58908.535us rms
+io latency: 21928 events, 0 overruns, 98142860us elapsed, 4475us avg, min 1687us max 7531us 1499.754us rms
+io write: 0 events, 0 overruns, 0us elapsed, 0us avg, min 0us max 0us 0.000us rms
+io update: 21928 events, 0 overruns, 21299540us elapsed, 971us avg, min 261us max 2947us 1055.764us rms
+io_badidle  : 0 events
+io_idle     : 58536 events
+io_uarterrs : 0 events
+io_protoerrs: 0 events
+io_dmaerrs  : 0 events
+io_crcerrs  : 0 events
+io_timeouts : 0 events
+io_retries  : 0 events
+io_dmasetup : 58536 events, 0 overruns, 336567us elapsed, 5us avg, min 3us max 265us 9.224us rms
+io_txns     : 58537 events, 0 overruns, 20200142us elapsed, 345us avg, min 134us max 783us 140.112us rms
+DMA allocations: 1 events

@@ -1245,7 +1245,7 @@ void AttPosEKF::FuseVelposNED()
         }
         if ((fuseHgtData || fuseRngData) && current_ekf_state.hgtHealth)
         {
-            if(fuseRngData) fuseData[2] = true;
+            //if(fuseRngData) fuseData[2] = true;
             fuseData[5] = true;
         }
         // Fuse measurements sequentially

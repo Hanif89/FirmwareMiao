@@ -575,7 +575,8 @@ MavlinkReceiver::handle_message_ros_estimate_path(mavlink_message_t *msg)
 		map_projection_reproject(&_hil_local_proj_ref, ros.x, ros.y, &lat, &lon);	
 		hil_gps.lat = lat  * 1.0e7;
 		hil_gps.lon = lon  * 1.0e7;
-
+		hil_gps.x_ned = ros.x;
+		hil_gps.y_ned = ros.y;
 		hil_gps.timestamp_time = ros.timestamp;
 		hil_gps.time_utc_usec = ros.timestamp;
 		hil_gps.timestamp_position = ros.timestamp;
@@ -588,7 +589,7 @@ MavlinkReceiver::handle_message_ros_estimate_path(mavlink_message_t *msg)
 		hil_gps.s_variance_m_s = 5.0f;
 
 		hil_gps.timestamp_velocity = ros.timestamp;
-		hil_gps.vel_m_s = (float)4.0 * 1e-2f; // from cm/s to m/s
+		hil_gps.vel_m_s = sqrt(ros.vx*ros.vx+ros.vy*ros.vy); // from cm/s to m/s
 		hil_gps.vel_n_m_s = ros.vx ; 
 		hil_gps.vel_e_m_s = ros.vy ; 
 		hil_gps.vel_d_m_s = ros.vz ; 

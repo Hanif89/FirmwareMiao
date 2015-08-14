@@ -82,6 +82,10 @@ struct vehicle_gps_position_s {
 	uint64_t time_utc_usec;				/**< Timestamp (microseconds, UTC), this is the timestamp which comes from the gps module. It might be unavailable right after cold start, indicated by a value of 0 */
 
 	uint8_t satellites_used;			/**< Number of satellites used */
+
+	float x_ned;
+	float y_ned;//miao:20150805
+	float z_ned;
 };
 
 /**
