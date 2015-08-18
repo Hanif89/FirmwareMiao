@@ -714,7 +714,7 @@ MulticopterPositionControl::control_auto_indoor(float dt)
 		_no_waypoints = 0 ;
 	}
 	float height_hover_constant= -1.0f;
-	float hover_time_constant = 10.0f;
+	float hover_time_constant = 6.0f;
 
 	//if(_ros.flight_mode==1)
 	if(_mode_mission == 1)
@@ -774,10 +774,13 @@ MulticopterPositionControl::control_auto_indoor(float dt)
 		if(_hover_time > hover_time_constant)
 		{
 			_hover_time = 0.0f;
-			_no_waypoints = _no_waypoints+1 ;
+			/*_last_waypoint[0] = _waypoints[_no_waypoints][0];
+			_last_waypoint[1] = _waypoints[_no_waypoints][1];
+			_last_waypoint[2] = _waypoints[_no_waypoints][2];*/
+			_no_waypoints = _no_waypoints+1 ;	
 			_last_waypoint[0] = _pos_sp(0);
 			_last_waypoint[1] = _pos_sp(1);
-			_last_waypoint[2] = _pos_sp(2);
+			_last_waypoint[2] = _pos_sp(2);		
 			if(_no_waypoints >= No_WP)
 			{
 				//_ftimes = _ftimes+1;
@@ -1220,8 +1223,8 @@ MulticopterPositionControl::task_main()
 		_waypoints[6][2]= l_wp[6][2];
 	}else{
 
-		No_WP = 7;
-		float l_wp[10][3]={{-1,1,-1},{-1,3,-1},{1,3,-1},{1,-1,-1},{-1,-1,-1},{-1,1,-1},{0,0,-1},{0,0,-1},{0,0,-1},{0,0,-1}};
+		No_WP = 6;
+		float l_wp[10][3]={{-1,-1,-1},{-1,3,-1},{1,3,-1},{1,-1,-1},{-1,-1,-1},{0,0,-1},{0,0,-1},{0,0,-1},{0,0,-1},{0,0,-1}};
 		_waypoints[0][0]= l_wp[0][0]*cosf(angleT)+l_wp[0][1]*sinf(angleT);
 		_waypoints[0][1]= -l_wp[0][0]*sinf(angleT)+l_wp[0][1]*cosf(angleT);
 		_waypoints[0][2]= l_wp[0][2];
@@ -1243,9 +1246,6 @@ MulticopterPositionControl::task_main()
 		_waypoints[6][0]= l_wp[6][0]*cosf(angleT)+l_wp[6][1]*sinf(angleT);
 		_waypoints[6][1]= -l_wp[6][0]*sinf(angleT)+l_wp[6][1]*cosf(angleT);
 		_waypoints[6][2]= l_wp[6][2];
-		_waypoints[7][0]= l_wp[7][0]*cosf(angleT)+l_wp[7][1]*sinf(angleT);
-		_waypoints[7][1]= -l_wp[7][0]*sinf(angleT)+l_wp[7][1]*cosf(angleT);
-		_waypoints[7][2]= l_wp[7][2];
 	}
 
 
