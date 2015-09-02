@@ -280,3 +280,25 @@ PARAM_DEFINE_FLOAT(PE_POSDEV_INIT, 5.0f);
  * @group Position Estimator
  */
 PARAM_DEFINE_INT32(PE_MAG_ENABLE, 0);
+
+/**
+ * Accel selector
+ *
+ * Default 0: Fuse all available
+ *
+ * @min 0
+ * @max 2
+ * @group Position Estimator
+ */
+PARAM_DEFINE_INT32(PE_ACC_SELECT, 0);
+
+/**
+ * Gyro Selector
+ *
+ * Default 0: Fuse all available
+ *
+ * @min 0
+ * @max 2
+ * @group Position Estimator
+ */
+PARAM_DEFINE_INT32(PE_GYRO_SELECT, 0);

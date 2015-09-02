@@ -237,6 +237,8 @@ private:
         float eas_noise;
         float pos_stddev_threshold;
         bool mag_enable;
+        uint8_t acc_sel;
+        uint8_t gyro_sel;
     }       _parameters;            /**< local copies of interesting parameters */
 
     struct {
@@ -259,6 +261,8 @@ private:
         param_t eas_noise;
         param_t pos_stddev_threshold;
         param_t mag_enable;
+        param_t acc_sel;
+        param_t gyro_sel;
     }       _parameter_handles;     /**< handles for interesting parameters */
 
     AttPosEKF                   *_ekf;

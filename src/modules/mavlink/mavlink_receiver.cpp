@@ -599,13 +599,15 @@ MavlinkReceiver::handle_message_ros_estimate_path(mavlink_message_t *msg)
 		hil_gps.fix_type = 3;
 		hil_gps.satellites_used = 8;  //TODO: rename mavlink_hil_gps_t sats visible to used?
 
+		/*
 		if (_gps_pub < 0) {
 			_gps_pub = orb_advertise(ORB_ID(vehicle_gps_position), &hil_gps);
 
 		} else {
 			orb_publish(ORB_ID(vehicle_gps_position), _gps_pub, &hil_gps);
 		}
-
+		*/
+		
 		vicon_position.timestamp = hrt_absolute_time();
 		vicon_position.x = pos.x;
 		vicon_position.y = pos.y;

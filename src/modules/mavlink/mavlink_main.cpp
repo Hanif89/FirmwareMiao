@@ -1375,11 +1375,11 @@ Mavlink::task_main(int argc, char *argv[])
 	switch (_mode) {
 	case MAVLINK_MODE_NORMAL:
 		configure_stream("SYS_STATUS", 1.0f);
-		//configure_stream("GPS_GLOBAL_ORIGIN", 0.5f);
-		configure_stream("HIGHRES_IMU", 200.0f);
-		configure_stream("ATTITUDE", 10.0f);
+		configure_stream("GPS_GLOBAL_ORIGIN", 0.5f);
+		configure_stream("HIGHRES_IMU", 50.0f);
+		configure_stream("ATTITUDE", 50.0f);
 		//configure_stream("VFR_HUD", 8.0f);
-		//configure_stream("GPS_RAW_INT", 1.0f);
+		configure_stream("GPS_RAW_INT", 1.0f);
 		configure_stream("GLOBAL_POSITION_INT", 3.0f);
 		configure_stream("LOCAL_POSITION_NED", 10.0f);//3.0f);//miao:
 		configure_stream("POSITION_TARGET_LOCAL_NED", 3.0f);//miao

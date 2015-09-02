@@ -220,6 +220,8 @@ AttitudePositionEstimatorEKF::AttitudePositionEstimatorEKF() :
 	_parameter_handles.eas_noise = param_find("PE_EAS_NOISE");
 	_parameter_handles.pos_stddev_threshold = param_find("PE_POSDEV_INIT");
 	_parameter_handles.mag_enable = param_find("PE_MAG_ENABLE");
+	_parameter_handles.acc_sel = param_find("PE_ACC_SELECT");
+	_parameter_handles.gyro_sel = param_find("PE_GYRO_SELECT");
 
 
 	/* fetch initial parameter values */
@@ -324,6 +326,8 @@ int AttitudePositionEstimatorEKF::parameters_update()
 	param_get(_parameter_handles.eas_noise, &(_parameters.eas_noise));
 	param_get(_parameter_handles.pos_stddev_threshold, &(_parameters.pos_stddev_threshold));
 	param_get(_parameter_handles.mag_enable, &(_parameters.mag_enable));
+	param_get(_parameter_handles.acc_sel, &(_parameters.acc_sel));
+	param_get(_parameter_handles.gyro_sel, &(_parameters.gyro_sel));
 
 	if (_ekf) {
 		// _ekf->yawVarScale = 1.0f;
@@ -864,7 +868,7 @@ void AttitudePositionEstimatorEKF::publishGlobalPosition()
 	}
 
 	/* local pos alt is negative, change sign and add alt offsets */
-	_global_pos.alt = (-_local_pos.z) - _baro_gps_offset;
+	_global_pos.alt = (-_local_pos.z);// - _baro_gps_offset; Hanif: flight for small area only, use local height instead of absolute
 
 	if (_local_pos.v_z_valid) {
 		_global_pos.vel_d = _local_pos.vz;
@@ -942,7 +946,7 @@ void AttitudePositionEstimatorEKF::updateSensorFusion(const bool fuseGPS, const 
 		// Convert GPS measurements to Pos NE, hgt and Vel NED
 
 		// set fusion flags
-		_ekf->fuseVelData = false;//true;
+		_ekf->fuseVelData = true;
 		_ekf->fusePosData = true;
 
 		// recall states stored at time of measurement after adjusting for delays
@@ -1001,6 +1005,7 @@ void AttitudePositionEstimatorEKF::updateSensorFusion(const bool fuseGPS, const 
 		// run the fusion step
 		_ekf->FuseVelposNED();
 
+
 	} else if (fuseBaro) {
 		// Could use a blend of GPS and baro alt data if desired
 
@@ -1014,6 +1019,7 @@ void AttitudePositionEstimatorEKF::updateSensorFusion(const bool fuseGPS, const 
 		
 		// run the fusion step
 		_ekf->FuseVelposNED();
+		//mavlink_and_console_log_info(_mavlink_fd, "intialize count: %d", _ekf->InitializeDynamic_count);
 
 	} else {
 		_ekf->fuseHgtData = false;
@@ -1209,13 +1215,13 @@ void AttitudePositionEstimatorEKF::pollData()
 	    isfinite(_sensor_combined.gyro_rad_s[1]) &&
 	    isfinite(_sensor_combined.gyro_rad_s[2]) &&
 	    (_sensor_combined.gyro_errcount <= _sensor_combined.gyro1_errcount)) {
-*/
+
 		_ekf->angRate.x = _sensor_combined.gyro_rad_s[0];
 		_ekf->angRate.y = _sensor_combined.gyro_rad_s[1];
 		_ekf->angRate.z = _sensor_combined.gyro_rad_s[2];
 		_gyro_main = 0;
 		_gyro_valid = true;
-/*
+
 	} else if (isfinite(_sensor_combined.gyro1_rad_s[0]) &&
 		   isfinite(_sensor_combined.gyro1_rad_s[1]) &&
 		   isfinite(_sensor_combined.gyro1_rad_s[2])) {
@@ -1229,9 +1235,54 @@ void AttitudePositionEstimatorEKF::pollData()
 	} else {
 		_gyro_valid = false;
 	}
+
 */
+	//Hanif: Complementary filtering of gyro inputs
+	//first case both, second case either, third case neither
+	//
+	bool gyro_finite = isfinite(_sensor_combined.gyro_rad_s[0]) && isfinite(_sensor_combined.gyro_rad_s[1]) && isfinite(_sensor_combined.gyro_rad_s[2]);
+	bool gyro1_finite = isfinite(_sensor_combined.gyro1_rad_s[0]) && isfinite(_sensor_combined.gyro1_rad_s[1]) && isfinite(_sensor_combined.gyro1_rad_s[2]);
+	float ratio = 0;
+	static uint8_t comCase = 0;
+	uint8_t last_comCase = 0;
+	if (gyro_finite && _sensor_combined.gyro_errcount <= _sensor_combined.gyro1_errcount + 3)  {
+		ratio = 0.7;
+		_gyro_main = 0;
+		_gyro_valid = true;
+	} else if (gyro1_finite){
+		ratio = 0.3;
+		_gyro_main = 1;
+		_gyro_valid = true;
+	} else {
+		_gyro_valid = false;
+	}
+
+	last_comCase = comCase;
+	if (gyro_finite && gyro1_finite && _parameters.gyro_sel == 0) {
+		_ekf->angRate.x = _sensor_combined.gyro_rad_s[0] * ratio + _sensor_combined.gyro1_rad_s[0] * (1.0f - ratio);
+		_ekf->angRate.y = _sensor_combined.gyro_rad_s[1] * ratio + _sensor_combined.gyro1_rad_s[1] * (1.0f - ratio);
+		_ekf->angRate.z = _sensor_combined.gyro_rad_s[2] * ratio + _sensor_combined.gyro1_rad_s[2] * (1.0f - ratio);
+		comCase = 0;
+	} else if (_gyro_valid && _gyro_main == 0 && _parameters.gyro_sel != 2) {
+		_ekf->angRate.x = _sensor_combined.gyro_rad_s[0];
+		_ekf->angRate.y = _sensor_combined.gyro_rad_s[1];
+		_ekf->angRate.z = _sensor_combined.gyro_rad_s[2];
+		comCase = 1;
+	} else if (_gyro_valid && _gyro_main == 1 && _parameters.gyro_sel != 1) {
+		_ekf->angRate.x = _sensor_combined.gyro1_rad_s[0];
+		_ekf->angRate.y = _sensor_combined.gyro1_rad_s[1];
+		_ekf->angRate.z = _sensor_combined.gyro1_rad_s[2];
+		comCase = 2;
+	} else {
+		comCase = 3;
+	}
+		
 	if (last_gyro_main != _gyro_main) {
 		mavlink_and_console_log_emergency(_mavlink_fd, "GYRO FAILED! Switched from #%d to %d", last_gyro_main, _gyro_main);
+	}
+
+	if (last_comCase != comCase) {
+		mavlink_and_console_log_emergency(_mavlink_fd, "Gyro com Case: %d", comCase);
 	}
 
 	if (!_gyro_valid) {
@@ -1242,23 +1293,65 @@ void AttitudePositionEstimatorEKF::pollData()
 		perf_count(_perf_gyro);
 	}
 
+
+
 	if (accel_updated) {
 
 		int last_accel_main = _accel_main;
 
 		/* fail over to the 2nd accel if we know the first is down */
 		//if (_sensor_combined.accelerometer_errcount <= _sensor_combined.accelerometer1_errcount) {
-			_ekf->accel.x = _sensor_combined.accelerometer_m_s2[0];
+	/*		_ekf->accel.x = _sensor_combined.accelerometer_m_s2[0];
 			_ekf->accel.y = _sensor_combined.accelerometer_m_s2[1];
 			_ekf->accel.z = _sensor_combined.accelerometer_m_s2[2];
 			_accel_main = 0;
-
+*/
 		/*} else {
 			_ekf->accel.x = _sensor_combined.accelerometer1_m_s2[0];
 			_ekf->accel.y = _sensor_combined.accelerometer1_m_s2[1];
 			_ekf->accel.z = _sensor_combined.accelerometer1_m_s2[2];
 			_accel_main = 1;
 		}*/
+
+	//Hanif: Complementary filtering of accel inputs
+	//first case both, second case either, third case neither
+	//
+	bool acc_finite = isfinite(_sensor_combined.accelerometer_m_s2[0]) && isfinite(_sensor_combined.accelerometer_m_s2[1]) && isfinite(_sensor_combined.accelerometer_m_s2[2]);
+	bool acc1_finite = isfinite(_sensor_combined.accelerometer1_m_s2[0]) && isfinite(_sensor_combined.accelerometer1_m_s2[1]) && isfinite(_sensor_combined.accelerometer1_m_s2[2]);
+	float acc_ratio = 0;
+	static uint8_t acc_comCase = 0;
+	uint8_t last_acc_comCase = 0;
+	if (acc_finite && _sensor_combined.accelerometer_errcount <= _sensor_combined.accelerometer1_errcount + 3)  {
+		acc_ratio = 0.7;
+		_accel_main = 0;
+		_accel_valid = true;
+	} else if (acc1_finite){
+		acc_ratio = 0.3;
+		_accel_main = 1;
+		_accel_valid = true;
+	} else {
+		_accel_valid = false;
+	}
+
+	last_acc_comCase = acc_comCase;
+	if (acc_finite && acc1_finite && _parameters.acc_sel == 0) {
+		_ekf->accel.x = _sensor_combined.accelerometer_m_s2[0] * acc_ratio + _sensor_combined.accelerometer1_m_s2[0] * (1.0f - acc_ratio);
+		_ekf->accel.y = _sensor_combined.accelerometer_m_s2[1] * acc_ratio + _sensor_combined.accelerometer1_m_s2[1] * (1.0f - acc_ratio);
+		_ekf->accel.z = _sensor_combined.accelerometer_m_s2[2] * acc_ratio + _sensor_combined.accelerometer1_m_s2[2] * (1.0f - acc_ratio);
+		acc_comCase = 0;
+	} else if (_accel_valid && _accel_main == 0 && _parameters.acc_sel != 2) {
+		_ekf->accel.x = _sensor_combined.accelerometer_m_s2[0];
+		_ekf->accel.y = _sensor_combined.accelerometer_m_s2[1];
+		_ekf->accel.z = _sensor_combined.accelerometer_m_s2[2];
+		acc_comCase = 1;
+	} else if (_accel_valid && _accel_main == 1 && _parameters.acc_sel != 1) {
+		_ekf->accel.x = _sensor_combined.accelerometer1_m_s2[0];
+		_ekf->accel.y = _sensor_combined.accelerometer1_m_s2[1];
+		_ekf->accel.z = _sensor_combined.accelerometer1_m_s2[2];
+		acc_comCase = 2;
+	} else {
+		acc_comCase = 3;
+	}
 
 		if (!_accel_valid) {
 			lastAccel = _ekf->accel;
@@ -1268,7 +1361,11 @@ void AttitudePositionEstimatorEKF::pollData()
 			mavlink_and_console_log_emergency(_mavlink_fd, "ACCEL FAILED! Switched from #%d to %d", last_accel_main, _accel_main);
 		}
 
-		_accel_valid = true;
+		if (last_acc_comCase != acc_comCase) {
+		mavlink_and_console_log_emergency(_mavlink_fd, "Accel com Case: %d", acc_comCase);
+		}
+
+		//_accel_valid = true;
 	}
 
 	_ekf->dAngIMU = 0.5f * (_ekf->angRate + lastAngRate) * _ekf->dtIMU;

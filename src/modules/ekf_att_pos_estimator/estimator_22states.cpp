@@ -297,7 +297,7 @@ void AttPosEKF::UpdateStrapdownEquationsNED()
         // We are using double here as we are unsure how small
         // the angle differences are and if we get into numeric
         // issues with float. The runtime impact is not measurable
-        // for these quantities.
+        // for these quantities. Hanif: Quaternion formulation from rotation about a particular axis
         deltaQuat[0] = cos(0.5*(double)rotationMag);
         float rotScaler = (sin(0.5*(double)rotationMag))/(double)rotationMag;
         deltaQuat[1] = correctedDelAng.x*rotScaler;
@@ -306,7 +306,7 @@ void AttPosEKF::UpdateStrapdownEquationsNED()
     }
 
     // Update the quaternions by rotating from the previous attitude through
-    // the delta angle rotation quaternion
+    // the delta angle rotation quaternion Hanif: quaternion multiplication (quaternion to be rotated X rotation quaternion)
     qUpdated[0] = states[0]*deltaQuat[0] - states[1]*deltaQuat[1] - states[2]*deltaQuat[2] - states[3]*deltaQuat[3];
     qUpdated[1] = states[0]*deltaQuat[1] + states[1]*deltaQuat[0] + states[2]*deltaQuat[3] - states[3]*deltaQuat[2];
     qUpdated[2] = states[0]*deltaQuat[2] + states[2]*deltaQuat[0] + states[3]*deltaQuat[1] - states[1]*deltaQuat[3];
@@ -1231,7 +1231,7 @@ void AttPosEKF::FuseVelposNED()
         {
             fuseData[0] = true;
             fuseData[1] = true;
-            fuseData[2] = false;//true;
+            fuseData[2] = true;
         }
         if (fuseVelData && fusionModeGPS == 1 && current_ekf_state.velHealth)
         {
@@ -1245,7 +1245,7 @@ void AttPosEKF::FuseVelposNED()
         }
         if ((fuseHgtData || fuseRngData) && current_ekf_state.hgtHealth)
         {
-            //if(fuseRngData) fuseData[2] = true;
+            if(fuseRngData) fuseData[2] = true;
             fuseData[5] = true;
         }
         // Fuse measurements sequentially
@@ -2628,7 +2628,7 @@ void AttPosEKF::CovarianceInit()
     P[0][0]   = 0.25f * sq(1.0f*deg2rad);
     P[1][1]   = 0.25f * sq(1.0f*deg2rad);
     P[2][2]   = 0.25f * sq(1.0f*deg2rad);
-    P[3][3]   = 0.25f * sq(10.0f*deg2rad);
+    P[3][3]   = 0.25f * sq(10.0f*deg2rad); //Hanif: originally 10.0f
 
     //velocities
     P[4][4]   = sq(0.7f);
@@ -2876,9 +2876,9 @@ bool AttPosEKF::VelNEDDiverged()
     current_vel.z = states[6];
 
     Vector3f gps_vel;
-    gps_vel.x = states[4];//velNED[0];//hanif
-    gps_vel.y = states[5];//velNED[1];
-    gps_vel.z = states[6];//velNED[2];
+    gps_vel.x = velNED[0];
+    gps_vel.y = velNED[1];
+    gps_vel.z = velNED[2];
 
     Vector3f delta = current_vel - gps_vel;
     float delta_len = delta.length();
@@ -3237,6 +3237,7 @@ void AttPosEKF::InitializeDynamic(float (&initvelNED)[3], float declination)
     Vector3f initMagXYZ;
     initMagXYZ   = magData - magBias;
     AttitudeInit(accel.x, accel.y, accel.z, initMagXYZ.x, initMagXYZ.y, initMagXYZ.z, declination, initQuat);
+    //InitializeDynamic_count++;
 
     // Calculate initial Tbn matrix and rotate Mag measurements into NED
     // to set initial NED magnetic field states
