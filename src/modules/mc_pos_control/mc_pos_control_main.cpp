@@ -66,6 +66,7 @@
 #include <uORB/topics/actuator_controls.h>
 #include <uORB/topics/vehicle_rates_setpoint.h>
 #include <uORB/topics/vehicle_attitude.h>
+#include <uORB/topics/vehicle_attitude_setpoint.h>
 #include <uORB/topics/vehicle_control_mode.h>
 #include <uORB/topics/actuator_armed.h>
 #include <uORB/topics/parameter_update.h>
@@ -73,6 +74,7 @@
 #include <uORB/topics/position_setpoint_triplet.h>
 #include <uORB/topics/vehicle_global_velocity_setpoint.h>
 #include <uORB/topics/vehicle_local_position_setpoint.h>
+#include <uORB/topics/home_position.h>
 
 #include <systemlib/systemlib.h>
 #include <mathlib/mathlib.h>
@@ -128,6 +130,7 @@ private:
 	int		_pos_sp_triplet_sub;	/**< position setpoint triplet */
 	int		_local_pos_sp_sub;		/**< offboard local position setpoint */
 	int		_global_vel_sp_sub;		/**< offboard global velocity setpoint */
+	int     _home_pos_sub;			/**< Hanif: home position for _ref_alt */
 
 	orb_advert_t	_att_sp_pub;			/**< attitude setpoint publication */
 	orb_advert_t	_local_pos_sp_pub;		/**< vehicle local position setpoint publication */
@@ -142,6 +145,7 @@ private:
 	struct position_setpoint_triplet_s		_pos_sp_triplet;	/**< vehicle global position setpoint triplet */
 	struct vehicle_local_position_setpoint_s	_local_pos_sp;		/**< vehicle local position setpoint */
 	struct vehicle_global_velocity_setpoint_s	_global_vel_sp;	/**< vehicle global velocity setpoint */
+	struct home_position_s			_home_pos; /**< Hanif: home position for _ref_alt */
 
 
 	struct {
@@ -302,6 +306,7 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_local_pos_sub(-1),
 	_pos_sp_triplet_sub(-1),
 	_global_vel_sp_sub(-1),
+	_home_pos_sub(-1),
 
 /* publications */
 	_att_sp_pub(-1),
@@ -324,6 +329,7 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	memset(&_pos_sp_triplet, 0, sizeof(_pos_sp_triplet));
 	memset(&_local_pos_sp, 0, sizeof(_local_pos_sp));
 	memset(&_global_vel_sp, 0, sizeof(_global_vel_sp));
+	memset(&_home_pos, 0, sizeof(_home_pos));
 
 	memset(&_ref_pos, 0, sizeof(_ref_pos));
 
@@ -505,6 +511,12 @@ MulticopterPositionControl::poll_subscriptions()
 	if (updated) {
 		orb_copy(ORB_ID(vehicle_local_position), _local_pos_sub, &_local_pos);
 	}
+
+	orb_check(_home_pos_sub, &updated);
+
+	if (updated) {
+		orb_copy(ORB_ID(home_position), _home_pos_sub, &_home_pos);
+	}
 }
 
 float
@@ -542,7 +554,7 @@ MulticopterPositionControl::update_ref()
 
 		/* update local projection reference */
 		map_projection_init(&_ref_pos, _local_pos.ref_lat, _local_pos.ref_lon);
-		_ref_alt = _local_pos.ref_alt;
+		_ref_alt = _home_pos.alt;
 
 		if (_ref_timestamp != 0) {
 			/* reproject position setpoint to new reference */
@@ -884,6 +896,9 @@ void MulticopterPositionControl::control_auto(float dt)
 		if (isfinite(_pos_sp_triplet.current.yaw)) {
 			_att_sp.yaw_body = _pos_sp_triplet.current.yaw;
 		}
+		else if ( _ref_alt + _local_pos.z < - 0.3f ) { /*relative height less than 0.5m*/
+			_att_sp.yaw_body = _att.yaw;
+		} 
 
 	} else {
 		/* no waypoint, do nothing, setpoint was already reset */

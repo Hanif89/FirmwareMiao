@@ -161,6 +161,8 @@ Mission::on_active()
 
 		}
 
+	} else if (_mission_type != MISSION_TYPE_NONE && _mission_item.nav_cmd == NAV_CMD_LAND) {   // Hanif: make land command go horizontal before landing
+		altitude_sp_land_sequence();
 	} else if (_mission_type != MISSION_TYPE_NONE &&_param_altmode.get() == MISSION_ALTMODE_FOH) {
 		altitude_sp_foh_update();
 	} else {
@@ -619,6 +621,42 @@ Mission::altitude_sp_foh_update()
 	}
 
 	_navigator->set_position_setpoint_triplet_updated();
+}
+
+void
+Mission::altitude_sp_land_sequence() 
+{
+	struct position_setpoint_triplet_s *pos_sp_triplet = _navigator->get_position_setpoint_triplet();
+
+	/* Don't change setpoint if last and current waypoint are not valid */
+	if (!pos_sp_triplet->previous.valid || !pos_sp_triplet->current.valid ||
+			!isfinite(_mission_item_previous_alt)) {
+		return;
+	}
+
+	/* Do not try to find a solution if the last waypoint is inside the acceptance radius of the current one */
+	if (_distance_current_previous - _mission_item.acceptance_radius < 0.0f) {
+		return;
+	}
+
+	/* Calculate distance to current waypoint */
+	float d_current = get_distance_to_next_waypoint(_mission_item.lat, _mission_item.lon,
+			_navigator->get_global_position()->lat, _navigator->get_global_position()->lon);
+
+	/* Save distance to waypoint if it is the smallest ever achieved, however make sure that
+	 * _min_current_sp_distance_xy is never larger than the distance between the current and the previous wp */
+	_min_current_sp_distance_xy = math::min(math::min(d_current, _min_current_sp_distance_xy),
+			_distance_current_previous);
+
+	if (_min_current_sp_distance_xy > _mission_item.acceptance_radius) {
+		pos_sp_triplet->current.alt = _mission_item_previous_alt;
+		pos_sp_triplet->current.type = position_setpoint_s::SETPOINT_TYPE_POSITION;
+	} else {
+		pos_sp_triplet->current.type = position_setpoint_s::SETPOINT_TYPE_LAND;
+	}
+
+	_navigator->set_position_setpoint_triplet_updated();
+
 }
 
 void

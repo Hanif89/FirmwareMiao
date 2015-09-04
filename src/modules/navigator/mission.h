@@ -128,6 +128,11 @@ private:
 	void altitude_sp_foh_update();
 
 	/**
+	 * Maintain current altitude before landing (Hanif)
+	 */
+	void altitude_sp_land_sequence();
+
+	/**
 	 * Resets the altitude sp foh logic
 	 */
 	void altitude_sp_foh_reset();

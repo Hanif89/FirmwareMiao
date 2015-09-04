@@ -66,7 +66,7 @@ PARAM_DEFINE_FLOAT(NAV_LOITER_RAD, 50.0f);
  * @max 200
  * @group Mission
  */
-PARAM_DEFINE_FLOAT(NAV_ACC_RAD, 10.0f);
+PARAM_DEFINE_FLOAT(NAV_ACC_RAD, 2.0f);
 
 /**
  * Set OBC mode for data link loss
