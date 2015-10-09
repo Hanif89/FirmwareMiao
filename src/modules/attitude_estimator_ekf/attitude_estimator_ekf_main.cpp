@@ -453,7 +453,7 @@ const unsigned int loop_interval_alarm = 6500;	// loop interval in microseconds
 					}
 
 					bool vision_updated = false;
-					orb_check(vision_sub, &vision_updated);
+					//orb_check(vision_sub, &vision_updated);
 
 					if (vision_updated) {
 						orb_copy(ORB_ID(vision_position_estimate), vision_sub, &vision);

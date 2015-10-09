@@ -123,6 +123,7 @@ AttitudePositionEstimatorEKF::AttitudePositionEstimatorEKF() :
 	_home_sub(-1),
 	_landDetectorSub(-1),
 	_armedSub(-1),
+	_viconSub(-1),
 
 /* publications */
 	_att_pub(-1),
@@ -146,6 +147,7 @@ AttitudePositionEstimatorEKF::AttitudePositionEstimatorEKF() :
     _distance {},
     _landDetector {},
     _armed {},
+    _vicon_pos({}),
 
     _gyro_offsets({}),
     _accel_offsets({}),
@@ -173,6 +175,7 @@ AttitudePositionEstimatorEKF::AttitudePositionEstimatorEKF() :
     _covariancePredictionDt(0.0f),
     _gpsIsGood(false),
     _previousGPSTimestamp(0),
+    _previousVicTimestamp(0),
     _baro_init(false),
     _baroAltRef(0.0f),
     _gps_initialized(false),
@@ -188,6 +191,8 @@ AttitudePositionEstimatorEKF::AttitudePositionEstimatorEKF() :
     _mag_main(0),
     _ekf_logging(true),
     _debug(0),
+    _viconIsGood(false),
+    _vicon_initialized(false),
 
     _newHgtData(false),
     _newAdsData(false),
@@ -513,6 +518,7 @@ void AttitudePositionEstimatorEKF::task_main()
 	_home_sub = orb_subscribe(ORB_ID(home_position));
 	_landDetectorSub = orb_subscribe(ORB_ID(vehicle_land_detected));
 	_armedSub = orb_subscribe(ORB_ID(actuator_armed));
+	_viconSub = orb_subscribe(ORB_ID(vehicle_vicon_position));
 	_manual_sub = orb_subscribe(ORB_ID(manual_control_setpoint));
 
 	/* rate limit vehicle status updates to 5Hz */
@@ -678,7 +684,7 @@ void AttitudePositionEstimatorEKF::task_main()
 					}
 
 					//Run EKF data fusion steps
-					updateSensorFusion(_gpsIsGood, _newDataMag, _newRangeData, _newHgtData, _newAdsData);
+					updateSensorFusion(_gpsIsGood, _viconIsGood, _newDataMag, _newRangeData, _newHgtData, _newAdsData);
 
 					//Publish attitude estimations
 					publishAttitude();
@@ -917,7 +923,7 @@ void AttitudePositionEstimatorEKF::publishWindEstimate()
 
 }
 
-void AttitudePositionEstimatorEKF::updateSensorFusion(const bool fuseGPS, const bool fuseMag,
+void AttitudePositionEstimatorEKF::updateSensorFusion(const bool fuseGPS, const bool fuseVicon, const bool fuseMag,
 		const bool fuseRangeSensor, const bool fuseBaro, const bool fuseAirSpeed)
 {
 	// Run the strapdown INS equations every IMU update
@@ -956,7 +962,31 @@ void AttitudePositionEstimatorEKF::updateSensorFusion(const bool fuseGPS, const 
 		// run the fusion step
 		_ekf->FuseVelposNED();
 
-	} else if (!_gps_initialized) {
+	} /* else if (IMUusec - _previousVicTimestamp > 200 * 1e3 && !_gps_initialized && _vicon_initialized) {
+
+		// force static mode
+		_ekf->staticMode = true;
+
+		// Convert GPS measurements to Pos NE, hgt and Vel NED
+		_ekf->velNED[0] = 0.0f;
+		_ekf->velNED[1] = 0.0f;
+		_ekf->velNED[2] = 0.0f;
+
+		_ekf->posNE[0] = _ekf->vicposNE[0];
+		_ekf->posNE[1] = _ekf->vicposNE[1];
+
+		// set fusion flags
+		_ekf->fuseVelData = true;
+		_ekf->fusePosData = true;
+
+		// recall states stored at time of measurement after adjusting for delays
+		_ekf->RecallStates(_ekf->statesAtVelTime, (IMUmsec - _parameters.vel_delay_ms));
+		_ekf->RecallStates(_ekf->statesAtPosTime, (IMUmsec - _parameters.pos_delay_ms));
+
+		// run the fusion step
+		_ekf->FuseVelposNED();
+
+	} */ else if (!_gps_initialized && !_vicon_initialized) {
 
 		// force static mode
 		_ekf->staticMode = true;
@@ -984,6 +1014,16 @@ void AttitudePositionEstimatorEKF::updateSensorFusion(const bool fuseGPS, const 
 		_ekf->fuseVelData = false;
 		_ekf->fusePosData = false;
 	}
+
+	if (fuseVicon) {
+		_ekf->fuseVicData = true;
+		_ekf->RecallStates(_ekf->statesAtPosTime, (IMUmsec-50));
+		_ekf->FuseVelposNED();
+
+	} else {
+		_ekf->fuseVicData = false;
+	}
+
 
 	if (fuseRangeSensor/*fuseBaro*/) {
 		// Could use a blend of GPS and baro alt data if desired
@@ -1402,6 +1442,32 @@ void AttitudePositionEstimatorEKF::pollData()
 		_ekf->VtasMeas = _airspeed.true_airspeed_m_s;
 	}
 
+	bool vicon_update;
+	orb_check(_viconSub, &vicon_update);
+
+	_viconIsGood = false;
+	if (vicon_update) {
+
+		orb_copy(ORB_ID(vehicle_vicon_position), _viconSub, &_vicon_pos);
+		_ekf->vicposNE[0] = _vicon_pos.x;
+		_ekf->vicposNE[1] = _vicon_pos.y;
+		if(fabsf(_vicon_pos.x) < 5.0f && fabsf(_vicon_pos.y) < 5.0f) _viconIsGood = true;
+
+		if(!_vicon_initialized) _vicon_initialized = true;
+
+		const float dtLastGoodVic = static_cast<float>(_vicon_pos.timestamp - _previousVicTimestamp) / 1e6f;
+
+		if (_previousVicTimestamp != 0) {
+				//Calculate average time between GPS updates
+				_ekf->updateDtGpsFilt(math::constrain(dtLastGoodVic, 0.01f, POS_RESET_THRESHOLD));
+		}
+		_previousVicTimestamp = _vicon_pos.timestamp;
+
+	} else if (_vicon_initialized && IMUusec - _previousVicTimestamp > 5e6) {
+
+		_vicon_initialized = false;
+
+	}
 
 	bool gps_update;
 	orb_check(_gps_sub, &gps_update);
@@ -1418,7 +1484,7 @@ void AttitudePositionEstimatorEKF::pollData()
 		}
 
 		//Check if the GPS fix is good enough for us to use
-		if (_gps.fix_type >= 3 && _gps.eph < requiredAccuracy && _gps.epv < requiredAccuracy) {
+		if (_gps.fix_type >= 3 && _gps.eph < requiredAccuracy && _gps.epv < requiredAccuracy * 2.0f) {
 			_gpsIsGood = true;
 
 		} else {
@@ -1433,6 +1499,7 @@ void AttitudePositionEstimatorEKF::pollData()
 			//Stop dead-reckoning mode
 			if (_global_pos.dead_reckoning) {
 				mavlink_log_info(_mavlink_fd, "[ekf] stop dead-reckoning");
+				
 			}
 
 			_global_pos.dead_reckoning = false;

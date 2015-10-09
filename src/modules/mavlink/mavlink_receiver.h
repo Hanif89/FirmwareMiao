@@ -79,6 +79,8 @@
 
 #define PX4_EPOCH_SECS 1234567890ULL
 
+#define TIME_SIZE 6
+
 class Mavlink;
 
 class MavlinkReceiver

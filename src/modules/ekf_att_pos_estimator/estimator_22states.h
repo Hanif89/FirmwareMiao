@@ -158,6 +158,7 @@ public:
     float dtHgtFilt; // average time between height measurement updates
     float dtRngFilt;
     float dtGpsFilt; // average time between gps measurement updates
+    float dtVicFilt;
     uint8_t fusionModeGPS; // 0 = GPS outputs 3D velocity, 1 = GPS outputs 2D velocity, 2 = GPS outputs no velocity
     float innovVelPos[6]; // innovation output
     float varInnovVelPos[6]; // innovation variance output
@@ -168,6 +169,7 @@ public:
     float baroHgtOffset;        ///< the baro (weather) offset from normalized altitude
     float rngMea; // Ground distance
     float rngVel; // Hanif:range vel var
+    float vicposNE[2];
 
     float grdHug_factor; //Hanif
     //uint8_t InitializeDynamic_count;
@@ -214,6 +216,7 @@ public:
     bool fuseVtasData; // boolean true when airspeed data is to be fused
     bool fuseRngData;   ///< true when range data is fused
     bool fuseOptFlowData; // true when optical flow data is fused
+    bool fuseVicData;
 
     bool inhibitWindStates; // true when wind states and covariances are to remain constant
     bool inhibitMagStates;  // true when magnetic field states and covariances are to remain constant
@@ -259,6 +262,8 @@ public:
     float moCompR_LOS;                      // scaler from sensor gyro rate to uncertainty in LOS rate
 
     void updateDtGpsFilt(float dt);
+
+    void updateDtVicFilt(float dt);
 
     void updateDtHgtFilt(float dt);
 

@@ -324,8 +324,8 @@ ToneAlarm::ToneAlarm() :
 	_next(nullptr)
 {
 	// enable debug() calls
-	//_debug_enabled = true;
-	_default_tunes[TONE_STARTUP_TUNE] = "MFT240L8 O4aO5dc O4aO5dc O4aO5dc L16dcdcdcdc";		// startup tune
+	//_debug_enabled = true;	MST255L4O3EEP4EP4CEP4GP64    MST255L8O3EEP8EP8CEP8GP64
+	_default_tunes[TONE_STARTUP_TUNE] = "MST255L8O3EEP8EP8CEP8GP64";//MFT240L8 O4aO5dc O4aO5dc O4aO5dc L16dcdcdcdc";		// startup tune
 	_default_tunes[TONE_ERROR_TUNE] = "MBT200a8a8a8PaaaP";						// ERROR tone
 	_default_tunes[TONE_NOTIFY_POSITIVE_TUNE] = "MFT200e8a8a";					// Notify Positive tone
 	_default_tunes[TONE_NOTIFY_NEUTRAL_TUNE] = "MFT200e8e";						// Notify Neutral tone

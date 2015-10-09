@@ -826,10 +826,36 @@ MavlinkReceiver::handle_message_vision_position_estimate(mavlink_message_t *msg)
 	mavlink_vision_position_estimate_t pos;
 	mavlink_msg_vision_position_estimate_decode(msg, &pos);
 
-	struct vision_position_estimate vision_position;
-	memset(&vision_position, 0, sizeof(vision_position));
+	static uint64_t time_triplet[TIME_SIZE] = {};
+	uint64_t time_sum = 0;
+	static uint64_t time_prev = 0;
+	float _freq;
 
-	// Use the component ID to identify the vision sensor
+	for(size_t i = 0; i < TIME_SIZE - 1; i++) time_triplet[i] = time_triplet[i+1];
+	time_triplet[TIME_SIZE - 1] = hrt_absolute_time() - time_prev;
+	time_prev = hrt_absolute_time();
+	for(size_t i = 0; i < TIME_SIZE; i++) time_sum += time_triplet[i];
+	_freq = TIME_SIZE / (float)time_sum * 1000000.0f;
+
+
+/*	struct vision_position_estimate vision_position;
+	memset(&vision_position, 0, sizeof(vision_position));
+*/
+	//mavlink_vicon_position_estimate_t pos;
+	//mavlink_msg_vicon_position_estimate_decode(msg, &pos);
+
+	struct vehicle_vicon_position_s vicon_position;
+	memset(&vicon_position, 0, sizeof(vicon_position));
+
+	vicon_position.timestamp = hrt_absolute_time();
+	vicon_position.x = pos.x;
+	vicon_position.y = pos.y;
+	vicon_position.z = pos.z;
+	vicon_position.roll = _freq;//pos.roll;
+	vicon_position.pitch = pos.pitch;
+	vicon_position.yaw = pos.yaw;
+
+/*	// Use the component ID to identify the vision sensor
 	vision_position.id = msg->compid;
 
 	vision_position.timestamp_boot = to_hrt(pos.usec); // Synced time
@@ -856,6 +882,13 @@ MavlinkReceiver::handle_message_vision_position_estimate(mavlink_message_t *msg)
 
 	} else {
 		orb_publish(ORB_ID(vision_position_estimate), _vision_position_pub, &vision_position);
+	}
+*/
+	if (_vicon_position_pub < 0) {
+		_vicon_position_pub = orb_advertise(ORB_ID(vehicle_vicon_position), &vicon_position);
+
+	} else {
+		orb_publish(ORB_ID(vehicle_vicon_position), _vicon_position_pub, &vicon_position);
 	}
 }
 

@@ -2514,7 +2514,7 @@ void answer_command(struct vehicle_command_s &cmd, enum VEHICLE_CMD_RESULT resul
 
 	case VEHICLE_CMD_RESULT_UNSUPPORTED:
 		mavlink_log_critical(mavlink_fd, "command unsupported: %u", cmd.command);
-		tune_negative(true);
+		//tune_negative(true);
 		break;
 
 	default:

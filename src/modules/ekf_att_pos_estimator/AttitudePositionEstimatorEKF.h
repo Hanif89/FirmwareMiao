@@ -59,6 +59,7 @@
 #include <uORB/topics/home_position.h>
 #include <uORB/topics/wind_estimate.h>
 #include <uORB/topics/sensor_combined.h>
+#include <uORB/topics/vehicle_vicon_position.h>
 
 #include <drivers/drv_hrt.h>
 #include <drivers/drv_gyro.h>
@@ -145,6 +146,7 @@ private:
     int     _home_sub;          /**< home position as defined by commander / user */
     int     _landDetectorSub;
     int     _armedSub;
+    int     _viconSub;
 
     orb_advert_t    _att_pub;           /**< vehicle attitude */
     orb_advert_t    _global_pos_pub;        /**< global position */
@@ -167,6 +169,7 @@ private:
     struct range_finder_report          _distance;      /**< distance estimate */
     struct vehicle_land_detected_s      _landDetector;
     struct actuator_armed_s             _armed;
+    struct vehicle_vicon_position_s     _vicon_pos;
 
     struct gyro_scale               _gyro_offsets[3];
     struct accel_scale              _accel_offsets[3];
@@ -194,6 +197,7 @@ private:
     float           _covariancePredictionDt;  ///< time lapsed since last covariance prediction
     bool            _gpsIsGood;               ///< True if the current GPS fix is good enough for us to use
     uint64_t        _previousGPSTimestamp;    ///< Timestamp of last good GPS fix we have received
+    uint64_t        _previousVicTimestamp;
     bool            _baro_init;
     float           _baroAltRef;
     bool            _gps_initialized;
@@ -209,6 +213,8 @@ private:
     int             _mag_main;          ///< index of the main magnetometer
     bool            _ekf_logging;       ///< log EKF state
     unsigned        _debug;             ///< debug level - default 0
+    bool            _viconIsGood;
+    bool            _vicon_initialized;
 
     bool            _newHgtData;
     bool            _newAdsData;
@@ -331,7 +337,7 @@ private:
     *   Runs the sensor fusion step of the filter. The parameters determine which of the sensors
     *   are fused with each other
     **/
-    void updateSensorFusion(const bool fuseGPS, const bool fuseMag, const bool fuseRangeSensor, 
+    void updateSensorFusion(const bool fuseGPS, const bool fuseVicon, const bool fuseMag, const bool fuseRangeSensor, 
             const bool fuseBaro, const bool fuseAirSpeed);
 
     /**
